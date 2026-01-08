@@ -102,6 +102,7 @@ logs/
 # ---------------------------------------------
 .coverage
 coverage.json
+coverage.xml
 htmlcov/
 .pytest_cache/
 
