@@ -222,3 +222,46 @@ secret-*.*
 # Add to .gitignore if needed per project
 # uv.lock
 .env.glm
+
+# ---------------------------------------------
+# Voice Man Project Specific
+# ---------------------------------------------
+# Uploaded audio files (sensitive data)
+data/uploads/
+*.mp3
+*.wav
+*.m4a
+*.flac
+*.ogg
+*.aac
+*.amr
+*.wma
+
+# Generated analysis reports and outputs
+*.pdf
+reports/
+output/
+
+# Analysis data and cache files
+data/*.json
+data/*.csv
+data/*.txt
+!data/crime_keywords.json  # Project configuration - keep tracked
+cache/
+temp/
+tmp/
+
+# Transcription and analysis results
+transcriptions/
+diarization/
+analysis/
+
+# Model files (large ML models)
+models/*.pt
+models/*.pth
+models/*.onnx
+models/*.bin
+
+# Test audio files (test fixtures with real audio)
+tests/fixtures/audio/
+tests/audio_samples/
