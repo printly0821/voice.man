@@ -206,6 +206,19 @@ pytest --cov=voice_man --cov-report=html
 pytest tests/unit/test_services.py
 ```
 
+### E2E 배치 테스트
+
+```bash
+# 기본 실행 (배치 크기 15)
+uv run python scripts/e2e_batch_test.py --input-dir ref/call
+
+# 배치 크기 및 화자 수 지정
+uv run python scripts/e2e_batch_test.py --input-dir ref/call --batch-size 20 --num-speakers 2
+
+# 드라이런 (파일 목록만 확인)
+uv run python scripts/e2e_batch_test.py --input-dir ref/call --dry-run
+```
+
 ## 프로젝트 구조
 
 ```
@@ -232,14 +245,23 @@ voice.man/
 │           ├── batch_service.py            # 병렬 배치 처리 서비스
 │           ├── memory_service.py           # 메모리 관리 서비스
 │           ├── analysis_pipeline_service.py # 분석 파이프라인 (GPU 통합)
-│           └── performance_report_service.py # 성능 리포트 생성
+│           ├── performance_report_service.py # 성능 리포트 생성
+│           └── e2e_test_service.py           # E2E 테스트 서비스
 ├── tests/
 │   ├── unit/                       # 단위 테스트
 │   ├── integration/                # 통합 테스트
 │   ├── acceptance/                 # 인수 테스트
+│   ├── e2e/                        # E2E 통합 테스트
+│   │   ├── conftest.py             # 테스트 픽스처
+│   │   ├── test_e2e_data_classes.py
+│   │   ├── test_e2e_checksum_utilities.py
+│   │   ├── test_e2e_runner.py
+│   │   ├── test_e2e_report_generation.py
+│   │   └── test_full_batch_processing.py
 │   └── test_parallel_processing.py # GPU 병렬 처리 테스트
 ├── scripts/
-│   └── process_audio_files.py      # 배치 오디오 처리 스크립트
+│   ├── process_audio_files.py      # 배치 오디오 처리 스크립트
+│   └── e2e_batch_test.py           # E2E 배치 테스트 스크립트
 ├── docs/                           # 문서
 ├── data/
 │   └── uploads/                    # 업로드된 오디오 파일
@@ -312,6 +334,7 @@ MIT License
 - [SPEC-VOICE-001](.moai/specs/SPEC-VOICE-001/spec.md) - 음성 분석 기본 시스템
 - [SPEC-PARALLEL-001](.moai/specs/SPEC-PARALLEL-001/spec.md) - GPU 병렬처리 최적화
 - [SPEC-WHISPERX-001](.moai/specs/SPEC-WHISPERX-001/spec.md) - WhisperX 통합 파이프라인
+- [SPEC-E2ETEST-001](.moai/specs/SPEC-E2ETEST-001/spec.md) - E2E 통합 테스트 (GPU 병렬 배치 처리)
 
-**버전**: 1.2.0
+**버전**: 1.3.0
 **상태**: 완료
