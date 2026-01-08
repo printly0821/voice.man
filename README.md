@@ -18,6 +18,9 @@ Voice Man은 음성 녹취 파일을 텍스트로 변환하고, 법적 증거로
 - **심리 분석**: 가스라이팅 패턴 및 감정 분석
 - **법적 증거 보고서 생성**: PDF 형식의 종합 보고서
 - **GPU 병렬 처리**: CUDA 기반 고성능 배치 처리 (50배 성능 향상)
+- **WhisperX 통합 파이프라인**: STT + 타임스탬프 정렬 + 화자분리 end-to-end GPU 처리
+- **Word-level 타임스탬프**: WAV2VEC2 기반 100ms 이내 정확도
+- **오디오 포맷 자동 변환**: m4a/mp3/wav/flac/ogg -> 16kHz mono WAV
 
 ## 시스템 아키텍처
 
@@ -57,6 +60,10 @@ flowchart TD
 ### 오디오 처리 및 STT
 - **faster-whisper 1.0.3+**: GPU 가속 STT 엔진 (OpenAI Whisper 대비 4배 빠름)
 - **pyannote-audio 3.1+**: 화자 분리
+- **WhisperX 3.1.5+**: 통합 STT + Alignment + Diarization 파이프라인
+- **WAV2VEC2**: Word-level 타임스탬프 정렬 (한국어 모델 지원)
+- **transformers 4.36.0+**: WAV2VEC2 모델 백엔드
+- **huggingface-hub 0.20.0+**: 모델 다운로드 및 인증
 - **FFmpeg 6.0+**: 오디오 전처리
 
 ### GPU 가속 및 병렬 처리
@@ -90,6 +97,13 @@ flowchart TD
 ```bash
 export CUDA_VISIBLE_DEVICES=0
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+# Hugging Face 인증 (WhisperX 화자 분리용, 필수)
+export HF_TOKEN="hf_xxxxxxxxxxxxx"
+
+# WhisperX 설정 (선택)
+export WHISPERX_MODEL_SIZE="large-v3"
+export WHISPERX_LANGUAGE="ko"
 ```
 
 ## 설치
@@ -204,10 +218,16 @@ voice.man/
 │       ├── models/
 │       │   ├── database.py         # SQLAlchemy 모델
 │       │   ├── diarization.py      # 화자 분리 모델
-│       │   └── whisper_model.py    # faster-whisper 래퍼 (GPU/CPU 자동 선택)
+│       │   ├── whisper_model.py    # faster-whisper 래퍼 (GPU/CPU 자동 선택)
+│       │   └── whisperx_pipeline.py    # WhisperX 통합 파이프라인
+│       ├── config/
+│       │   └── whisperx_config.py      # WhisperX 설정 관리
 │       └── services/
 │           ├── __init__.py
 │           ├── diarization_service.py      # 화자 분리 서비스
+│           ├── alignment_service.py          # WAV2VEC2 타임스탬프 정렬
+│           ├── audio_converter_service.py    # 오디오 포맷 변환
+│           ├── whisperx_service.py           # WhisperX 서비스 레이어
 │           ├── gpu_monitor_service.py      # GPU 모니터링 및 메모리 관리
 │           ├── batch_service.py            # 병렬 배치 처리 서비스
 │           ├── memory_service.py           # 메모리 관리 서비스
@@ -291,6 +311,7 @@ MIT License
 **SPEC**:
 - [SPEC-VOICE-001](.moai/specs/SPEC-VOICE-001/spec.md) - 음성 분석 기본 시스템
 - [SPEC-PARALLEL-001](.moai/specs/SPEC-PARALLEL-001/spec.md) - GPU 병렬처리 최적화
+- [SPEC-WHISPERX-001](.moai/specs/SPEC-WHISPERX-001/spec.md) - WhisperX 통합 파이프라인
 
-**버전**: 1.1.0
+**버전**: 1.2.0
 **상태**: 완료
