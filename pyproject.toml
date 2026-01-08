@@ -1,0 +1,41 @@
+[project]
+name = "voice-man"
+version = "0.1.0"
+description = "음성 녹취 증거 분석 시스템"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.14.0",
+    "python-multipart>=0.0.17",
+    "aiofiles>=24.1.0",
+    "ffmpeg-python>=0.2.0",
+    "openai-whisper>=20231117",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.0",
+    "pytest-cov>=7.0.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.28.0",
+    "ruff>=0.8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+ignore = ["E402", "F401"]  # Module level import not at top of file (for dynamic imports), unused imports
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
