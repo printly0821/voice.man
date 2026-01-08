@@ -220,3 +220,4 @@ secret-*.*
 # uv.lock is intentionally included for reproducible builds
 # Add to .gitignore if needed per project
 # uv.lock
+.env.glm
