@@ -13,6 +13,8 @@ from unittest.mock import patch
 
 import pytest
 
+from src.voice_man import services
+
 
 class TestAudioMetadataExtraction:
     """오디오 메타데이터 추출 테스트"""

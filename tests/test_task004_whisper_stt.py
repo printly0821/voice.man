@@ -14,6 +14,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.voice_man import services
+
 
 class TestWhisperTranscription:
     """Whisper STT 변환 테스트"""
