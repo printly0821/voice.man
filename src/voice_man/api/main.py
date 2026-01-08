@@ -4,6 +4,7 @@ FastAPI Main Application
 Voice Man 시스템의 진입점으로, 모든 API 엔드포인트를 관리합니다.
 """
 
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, File, HTTPException, UploadFile, status

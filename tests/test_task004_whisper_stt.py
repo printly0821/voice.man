@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.voice_man import services
+from voice_man import services
 
 
 class TestWhisperTranscription:

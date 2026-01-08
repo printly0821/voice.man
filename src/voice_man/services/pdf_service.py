@@ -300,7 +300,6 @@ class PDFService:
 
         # Create story
         story = []
-        styles = getSampleStyleSheet()
 
         # Add title
         title_style = ParagraphStyle(

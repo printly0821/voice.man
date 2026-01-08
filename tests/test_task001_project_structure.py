@@ -36,8 +36,7 @@ class TestProjectStructure:
 
         dependencies = config.get("project", {}).get("dependencies", [])
         dep_names = [
-            dep.split("==")[0].split(">=")[0].split(">")[0].split("<")[0]
-            for dep in dependencies
+            dep.split("==")[0].split(">=")[0].split(">")[0].split("<")[0] for dep in dependencies
         ]
 
         required_deps = [
@@ -49,9 +48,7 @@ class TestProjectStructure:
         ]
 
         for dep in required_deps:
-            assert any(dep in d for d in dep_names), (
-                f"필수 의존성 {dep}가 누락되었습니다"
-            )
+            assert any(dep in d for d in dep_names), f"필수 의존성 {dep}가 누락되었습니다"
 
     def test_src_directory_exists(self):
         """src 디렉토리가 존재해야 함"""
@@ -81,7 +78,7 @@ class TestProjectStructure:
     def test_fastapi_app_can_be_imported(self):
         """FastAPI 앱을 임포트할 수 있어야 함"""
         try:
-            from src.voice_man.main import app
+            from voice_man.main import app
 
             assert app is not None, "FastAPI 앱이 None입니다"
         except ImportError as e:
@@ -90,13 +87,13 @@ class TestProjectStructure:
     def test_fastapi_app_is_fastapi_instance(self):
         """앱이 FastAPI 인스턴스여야 함"""
         from fastapi import FastAPI
-        from src.voice_man.main import app
+        from voice_man.main import app
 
         assert isinstance(app, FastAPI), "앱이 FastAPI 인스턴스가 아닙니다"
 
     def test_health_endpoint_exists(self):
         """/health 엔드포인트가 존재해야 함"""
-        from src.voice_man.main import app
+        from voice_man.main import app
 
         routes = [route.path for route in app.routes]
         assert "/health" in routes, "/health 엔드포인트가 존재하지 않습니다"
@@ -104,7 +101,7 @@ class TestProjectStructure:
     def test_health_endpoint_returns_200(self):
         """/health 엔드포인트가 200 상태를 반환해야 함"""
         from fastapi.testclient import TestClient
-        from src.voice_man.main import app
+        from voice_man.main import app
 
         client = TestClient(app)
         response = client.get("/health")
@@ -116,16 +113,14 @@ class TestProjectStructure:
     def test_health_endpoint_returns_correct_response(self):
         """/health 엔드포인트가 올바른 응답을 반환해야 함"""
         from fastapi.testclient import TestClient
-        from src.voice_man.main import app
+        from voice_man.main import app
 
         client = TestClient(app)
         response = client.get("/health")
 
         data = response.json()
         assert "status" in data, "응답에 status 필드가 없습니다"
-        assert data["status"] == "healthy", (
-            f"status가 'healthy'가 아닙니다: {data.get('status')}"
-        )
+        assert data["status"] == "healthy", f"status가 'healthy'가 아닙니다: {data.get('status')}"
 
     def test_package_installable(self):
         """패키지가 설치 가능해야 함 (설치 검증)"""

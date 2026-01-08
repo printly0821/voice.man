@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.voice_man import services
+from voice_man import services
 
 
 class TestAudioMetadataExtraction:

@@ -10,7 +10,7 @@ Test coverage for:
 
 import pytest
 from pathlib import Path
-from src.voice_man.services.report_template_service import ReportTemplateService
+from voice_man.services.report_template_service import ReportTemplateService
 
 
 class TestReportTemplateServiceInitialization:

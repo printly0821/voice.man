@@ -9,7 +9,7 @@ Acceptance Criteria:
 import hashlib
 from io import BytesIO
 from fastapi.testclient import TestClient
-from src.voice_man.main import app
+from voice_man.main import app
 
 
 class TestAudioUploadEndpoint:
