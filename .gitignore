@@ -221,6 +221,7 @@ secret-*.*
 # uv.lock is intentionally included for reproducible builds
 # Add to .gitignore if needed per project
 # uv.lock
+# GLM API Key (for Zhipu AI integration)
 .env.glm
 
 # ---------------------------------------------
