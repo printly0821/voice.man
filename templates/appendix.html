@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>참고 법령</title>
+    <style>
+        body {
+            font-family: 'NanumGothic', 'Malgun Gothic', sans-serif;
+            margin: 50px;
+            line-height: 1.6;
+        }
+        .appendix-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .legal-reference {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #28a745;
+        }
+        .legal-article {
+            font-size: 16px;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+        .legal-title {
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .legal-description {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="appendix-title">참고 법령</div>
+
+    {% if legal_references is defined and legal_references %}
+        {% for reference in legal_references %}
+        <div class="legal-reference">
+            <div class="legal-article">{{ reference.article }}</div>
+            <div class="legal-title">{{ reference.title }}</div>
+            <div class="legal-description">{{ reference.description }}</div>
+        </div>
+        {% endfor %}
+    {% endif %}
+</body>
+</html>
