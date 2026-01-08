@@ -265,3 +265,12 @@ models/*.bin
 # Test audio files (test fixtures with real audio)
 tests/fixtures/audio/
 tests/audio_samples/
+
+# Documentation local config (not for distribution)
+docs/.moai/
+docs/config.yaml
+docs/multilingual-triggers.yaml
+docs/questions/
+docs/sections/
+docs/setup-glm.py
+docs/statusline-config.yaml
