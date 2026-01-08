@@ -2,7 +2,12 @@
 단일 파일 분석 파이프라인 서비스
 
 STT 변환, 범죄 태깅, 가스라이팅 감지, 감정 분석을 통합하는 파이프라인 서비스
-CPU 환경에 최적화 (화자 분리 제외, 키워드 기반 분석)
+GPU/CPU 환경 모두 지원 (SPEC-PARALLEL-001)
+
+EARS Requirements Implemented:
+- E1: GPU availability check with CPU fallback
+- F1: faster-whisper based STT (GPU: float16, CPU: int8)
+- F5: Dynamic batch size adjustment
 """
 
 import logging
@@ -66,35 +71,120 @@ class SingleFileAnalysisPipeline:
     단일 파일 분석 파이프라인
 
     처리 단계:
-    1. STT 변환 (Whisper CPU 버전)
+    1. STT 변환 (Whisper GPU/CPU 버전)
     2. 범죄 태깅 (키워드 매칭)
     3. 가스라이팅 감지 (키워드 매칭)
     4. 감정 분석 (규칙 기반)
     5. 진행률 업데이트
+
+    SPEC-PARALLEL-001 지원:
+    - E1: GPU 가용성 확인 및 CPU 폴백
+    - F1: faster-whisper 기반 STT (GPU: float16, CPU: int8)
+    - F5: 동적 배치 크기 조정
     """
 
     def __init__(
         self,
         progress_tracker: Optional[ProgressTracker] = None,
         use_whisper_cpu: bool = True,
+        use_gpu: bool = False,
+        initial_batch_size: int = 15,
+        model_size: str = "large-v3",
     ):
         """
         초기화
 
         Args:
             progress_tracker: 진행률 추적기 (선택)
-            use_whisper_cpu: Whisper CPU 버전 사용 여부
+            use_whisper_cpu: Whisper CPU 버전 사용 여부 (레거시 호환)
+            use_gpu: GPU 사용 여부 (SPEC-PARALLEL-001)
+            initial_batch_size: 초기 배치 크기 (F5)
+            model_size: Whisper 모델 크기
         """
         self.progress_tracker = progress_tracker or ProgressTracker(ProgressConfig())
-        self.use_whisper_cpu = use_whisper_cpu
+        self.use_whisper_cpu = use_whisper_cpu and not use_gpu
+        self.use_gpu = use_gpu
+        self.initial_batch_size = initial_batch_size
+        self.current_batch_size = initial_batch_size
+        self.model_size = model_size
+
+        # E1: GPU 가용성 확인 및 디바이스 결정
+        self.device = self._determine_device()
 
         # 분석 서비스 초기화
         self.crime_service = CrimeTaggingService()
         self.gaslighting_service = GaslightingService()
         self.emotion_service = EmotionAnalysisService()
 
+        # GPU 모니터 (지연 로딩)
+        self._gpu_monitor = None
+
         # Whisper 모델 (지연 로딩)
         self.whisper_model = None
+
+        logger.info(f"Pipeline initialized: device={self.device}, model={model_size}")
+
+    def _determine_device(self) -> str:
+        """
+        사용할 디바이스 결정
+
+        Returns:
+            "cuda" 또는 "cpu"
+
+        Implements:
+            E1: GPU availability check with CPU fallback
+        """
+        if not self.use_gpu:
+            return "cpu"
+
+        try:
+            import torch
+            if torch.cuda.is_available():
+                logger.info("GPU available, using CUDA")
+                return "cuda"
+            else:
+                logger.info("GPU requested but not available, falling back to CPU")
+                return "cpu"
+        except ImportError:
+            logger.warning("PyTorch not installed, using CPU")
+            return "cpu"
+
+    def _get_gpu_monitor(self):
+        """GPU 모니터 지연 로딩"""
+        if self._gpu_monitor is None and self.device == "cuda":
+            try:
+                from voice_man.services.gpu_monitor_service import GPUMonitorService
+                self._gpu_monitor = GPUMonitorService()
+            except ImportError:
+                logger.warning("GPU monitor service not available")
+        return self._gpu_monitor
+
+    def get_adjusted_batch_size(self) -> int:
+        """
+        현재 GPU 메모리 상태에 따른 배치 크기 조정
+
+        Returns:
+            조정된 배치 크기
+
+        Implements:
+            F5: Dynamic batch size adjustment
+            E2: Auto-reduce batch size by 50% on memory shortage
+        """
+        if self.device != "cuda":
+            return self.current_batch_size
+
+        gpu_monitor = self._get_gpu_monitor()
+        if gpu_monitor is None:
+            return self.current_batch_size
+
+        recommended = gpu_monitor.get_recommended_batch_size(self.current_batch_size)
+        if recommended != self.current_batch_size:
+            logger.info(
+                f"Batch size adjusted: {self.current_batch_size} -> {recommended}"
+            )
+            self.current_batch_size = recommended
+
+        return self.current_batch_size
 
     def _load_whisper_model(self):
         """Whisper 모델 로딩 (CPU 버전)"""
