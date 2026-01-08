@@ -1,7 +1,7 @@
 ---
 id: SPEC-WHISPERX-001
-version: "1.0.0"
-status: "planned"
+version: "1.1.0"
+status: "completed"
 created: "2026-01-08"
 updated: "2026-01-08"
 author: "지니"
@@ -28,6 +28,7 @@ lifecycle: "spec-anchored"
 | 버전 | 날짜 | 작성자 | 변경 내용 |
 |------|------|--------|-----------|
 | 1.0.0 | 2026-01-08 | 지니 | 초안 작성 - WhisperX 통합 파이프라인 요구사항 정의 |
+| 1.1.0 | 2026-01-08 | 지니 | TDD 구현 완료 - WhisperX 통합 파이프라인 구현 |
 
 ## CONTEXT
 
