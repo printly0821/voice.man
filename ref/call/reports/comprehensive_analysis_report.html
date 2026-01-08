@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>음성 녹취 종합 분석 보고서</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header .meta {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+        }
+
+        .card h3 {
+            color: #667eea;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .card .description {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .file-item {
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            background: #f9f9f9;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            background: #f0f0f0;
+            transform: translateX(5px);
+        }
+
+        .file-item.high-risk {
+            border-left-color: #ef4444;
+            background: #fee2e2;
+        }
+
+        .file-item.medium-risk {
+            border-left-color: #f59e0b;
+            background: #fef3c7;
+        }
+
+        .file-item.low-risk {
+            border-left-color: #10b981;
+            background: #d1fae5;
+        }
+
+        .file-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+
+        .file-risk {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .risk-high {
+            background: #ef4444;
+            color: white;
+        }
+
+        .risk-medium {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .risk-low {
+            background: #10b981;
+            color: white;
+        }
+
+        .crime-tags {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .crime-tag {
+            background: #e5e7eb;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            color: #374151;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+            margin: 20px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -38px;
+            top: 20px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px #667eea;
+        }
+
+        .timeline-date {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .stat-table th,
+        .stat-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .stat-table th {
+            background: #f3f4f6;
+            font-weight: bold;
+            color: #374151;
+        }
+
+        .stat-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .emotion-bar {
+            height: 30px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .emotion-bar-label {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .emotion-bar-count {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-weight: bold;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .section {
+                page-break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #e5e7eb;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>음성 녹취 종합 분석 보고서</h1>
+            <div class="meta">
+                <p>분석 기간: 2025년 5월 15일 - 2025년 6월 10일</p>
+                <p>분석 파일 수: 10개 | 생성일: 2026년 1월 8일</p>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="card">
+                <h3>분석 파일 수</h3>
+                <div class="value">10</div>
+                <div class="description">총 음성 녹취 파일</div>
+            </div>
+            <div class="card">
+                <h3>범죄 발언</h3>
+                <div class="value">13</div>
+                <div class="description">검출된 범죄 유형 발언</div>
+            </div>
+            <div class="card">
+                <h3>가스라이팅</h3>
+                <div class="value">20</div>
+                <div class="description">가스라이팅 패턴 지표</div>
+            </div>
+            <div class="card">
+                <h3>감정 태깅</h3>
+                <div class="value">24</div>
+                <div class="description">감정 상태 분석</div>
+            </div>
+        </div>
+
+        <!-- Risk Distribution Chart -->
+        <div class="section">
+            <h2>위험도 등급 분포</h2>
+            <div class="chart-container">
+                <canvas id="riskChart"></canvas>
+            </div>
+            <div class="file-list">
+                <div class="file-item medium-risk">
+                    <div class="file-name">김경민_250515_155033.m4a</div>
+                    <div class="file-risk">위험도: MEDIUM</div>
+                    <div class="crime-tags">
+                        <span class="crime-tag">협박</span>
+                    </div>
+                </div>
+                <div class="file-item low-risk">
+                    <div class="file-name">김경민_250520_170729.m4a</div>
+                    <div class="file-risk">위험도: LOW</div>
+                    <div class="crime-tags">
+                        <span class="crime-tag">일반 대화</span>
+                    </div>
+                </div>
+                <div class="file-item medium-risk">
+                    <div class="file-name">김경민_250522_142641.m4a</div>
+                    <div class="file-risk">위험도: MEDIUM</div>
+                    <div class="crime-tags">
+                        <span class="crime-tag">모욕</span>
+                    </div>
+                </div>
+                <div class="file-item medium-risk">
+                    <div class="file-name">신기연_250603_201127.m4a</div>
+                    <div class="file-risk">위험도: MEDIUM</div>
+                    <div class="crime-tags">
+                        <span class="crime-tag">가스라이팅</span>
+                    </div>
+                </div>
+                <div class="file-item low-risk">
+                    <div class="file-name">신기연_250604_170850.m4a</div>
+                    <div class="file-risk">위험도: LOW</div>
+                    <div class="crime-tags">
+                        <span class="crime-tag">일반 대화</span>
+                    </div>
+                </div>
+                <div class="file-item medium-risk">
+                    <div class="file-name">신기연_250605_101141.m4a</div>
+                    <div class="file-risk">위험도: MEDIUM</div>
+                    <div class="crime-tags">
+                        <span class="crime-tag">분노</span>
+                        <span class="crime-tag">공갈</span>
+                        <span class="crime-tag">모욕</span>
+                    </div>
+                </div>
+                <div class="file-item low-risk">
+                    <div class="file-name">신기연_250605_160838.m4a</div>
+                    <div class="file-risk">위험도: LOW</div>
+                    <div class="crime-tags">
+                        <span class="crime-tag">일반 대화</span>
+                    </div>
+                </div>
+                <div class="file-item medium-risk">
+                    <div class="file-name">신기연_250609_211005.m4a</div>
+                    <div class="file-risk">위험도: MEDIUM</div>
+                    <div class="crime-tags">
+                        <span class="crime-tag">고립/방어</span>
+                    </div>
+                </div>
+                <div class="file-item low-risk">
+                    <div class="file-name">신기연_250610_105838.m4a</div>
+                    <div class="file-risk">위험도: LOW</div>
+                    <div class="crime-tags">
+                        <span class="crime-tag">일반 대화</span>
+                    </div>
+                </div>
+                <div class="file-item medium-risk">
+                    <div class="file-name">신기연_250610_145719.m4a</div>
+                    <div class="file-risk">위험도: MEDIUM</div>
+                    <div class="crime-tags">
+                        <span class="crime-tag">고립/방어</span>
+                        <span class="crime-tag">긴급 위협</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Crime Analysis -->
+        <div class="section">
+            <h2>범죄 발언 분석 (13개)</h2>
+            <div class="chart-container">
+                <canvas id="crimeChart"></canvas>
+            </div>
+            <table class="stat-table">
+                <thead>
+                    <tr>
+                        <th>범죄 유형</th>
+                        <th>검출 건수</th>
+                        <th>비율</th>
+                        <th>설명</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>협박</strong></td>
+                        <td>4</td>
+                        <td>30.8%</td>
+                        <td>긴급 위협, 위협 발언 명확</td>
+                    </tr>
+                    <tr>
+                        <td><strong>모욕</strong></td>
+                        <td>3</td>
+                        <td>23.1%</td>
+                        <td>욕설, 비하, 천박</td>
+                    </tr>
+                    <tr>
+                        <td><strong>공갈</strong></td>
+                        <td>2</td>
+                        <td>15.4%</td>
+                        <td>공포심 조장, 금전 요구</td>
+                    </tr>
+                    <tr>
+                        <td><strong>분노</strong></td>
+                        <td>2</td>
+                        <td>15.4%</td>
+                        <td>분노, 조롱, 압박</td>
+                    </tr>
+                    <tr>
+                        <td><strong>사기</strong></td>
+                        <td>2</td>
+                        <td>15.4%</td>
+                        <td>기만 사기, 허위</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Gaslighting Analysis -->
+        <div class="section">
+            <h2>가스라이팅 패턴 분석 (20개)</h2>
+            <div class="chart-container">
+                <canvas id="gaslightingChart"></canvas>
+            </div>
+            <table class="stat-table">
+                <thead>
+                    <tr>
+                        <th>가스라이팅 유형</th>
+                        <th>검출 건수</th>
+                        <th>비율</th>
+                        <th>세부 패턴</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>전가 (Transfer)</strong></td>
+                        <td>8</td>
+                        <td>40.0%</td>
+                        <td>책임 전가, 비난 전가, 귀탈, 공백 전가, 원인 막고</td>
+                    </tr>
+                    <tr>
+                        <td><strong>부정 (Denial)</strong></td>
+                        <td>6</td>
+                        <td>30.0%</td>
+                        <td>현실 부정, 기억 부정, 판단 부정</td>
+                    </tr>
+                    <tr>
+                        <td><strong>혼란 (Confusion)</strong></td>
+                        <td>3</td>
+                        <td>15.0%</td>
+                        <td>모호 불일치, 혼란 유발</td>
+                    </tr>
+                    <tr>
+                        <td><strong>축소 (Minimization)</strong></td>
+                        <td>3</td>
+                        <td>15.0%</td>
+                        <td>감정 축소, 사건 축소, 효과 축소</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Emotion Analysis -->
+        <div class="section">
+            <h2>감정 분석 (24개 감정 태깅)</h2>
+            <div class="chart-container">
+                <canvas id="emotionChart"></canvas>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #667eea;">감정 분포 상세</h3>
+
+            <div class="emotion-bar" style="width: 50%;">
+                <div class="emotion-bar-label">분노 (Anger)</div>
+                <div class="emotion-bar-count">12회</div>
+            </div>
+
+            <div class="emotion-bar" style="width: 25%;">
+                <div class="emotion-bar-label">공포 (Fear)</div>
+                <div class="emotion-bar-count">6회</div>
+            </div>
+
+            <div class="emotion-bar" style="width: 16.67%;">
+                <div class="emotion-bar-label">불안 (Anxiety)</div>
+                <div class="emotion-bar-count">4회</div>
+            </div>
+
+            <div class="emotion-bar" style="width: 8.33%;">
+                <div class="emotion-bar-label">혼합 감정 (분노+공포)</div>
+                <div class="emotion-bar-count">2회</div>
+            </div>
+
+            <p style="margin-top: 20px; color: #666; font-size: 0.9em;">
+                * 기타 감정: 슬픔, 중립, 기쁨, 안정 각 1-2회 검출
+            </p>
+        </div>
+
+        <!-- Timeline Analysis -->
+        <div class="section">
+            <h2>시간 타임라인 분석</h2>
+            <div class="chart-container">
+                <canvas id="timelineChart"></canvas>
+            </div>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-date">2025년 5월 15일</div>
+                    <div><strong>화자:</strong> 김경민</div>
+                    <div><strong>위험도:</strong> MEDIUM (협박)</div>
+                    <div><strong>주요 발언:</strong> 협박 언급</div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-date">2025년 5월 20일</div>
+                    <div><strong>화자:</strong> 김경민</div>
+                    <div><strong>위험도:</strong> LOW (일반 대화)</div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-date">2025년 5월 22일</div>
+                    <div><strong>화자:</strong> 김경민</div>
+                    <div><strong>위험도:</strong> MEDIUM (모욕)</div>
+                    <div><strong>주요 발언:</strong> 모욕 언급</div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-date">2025년 6월 3일</div>
+                    <div><strong>화자:</strong> 신기연</div>
+                    <div><strong>위험도:</strong> MEDIUM (가스라이팅)</div>
+                    <div><strong>주요 패턴:</strong> 가스라이팅 지표</div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-date">2025년 6월 4-5일</div>
+                    <div><strong>화자:</strong> 신기연</div>
+                    <div><strong>위험도:</strong> MEDIUM (분노, 공갈, 모욕)</div>
+                    <div><strong>주요 발언:</strong> 분노, 공포심 조장, 욕설</div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-date">2025년 6월 9-10일</div>
+                    <div><strong>화자:</strong> 신기연</div>
+                    <div><strong>위험도:</strong> MEDIUM (고립/방어, 긴급 위협)</div>
+                    <div><strong>주요 패턴:</strong> 고립화, 방어적 태도</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Speaker Analysis -->
+        <div class="section">
+            <h2>화자별 분석</h2>
+            <div class="chart-container">
+                <canvas id="speakerChart"></canvas>
+            </div>
+            <table class="stat-table">
+                <thead>
+                    <tr>
+                        <th>화자</th>
+                        <th>분석 파일 수</th>
+                        <th>중위험 이상</th>
+                        <th>주요 범죄 유형</th>
+                        <th>주요 감정</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>신기연</strong></td>
+                        <td>7</td>
+                        <td>4 (57.1%)</td>
+                        <td>가스라이팅, 고립/방어, 분노</td>
+                        <td>분노, 공포</td>
+                    </tr>
+                    <tr>
+                        <td><strong>김경민</strong></td>
+                        <td>3</td>
+                        <td>2 (66.7%)</td>
+                        <td>협박, 모욕</td>
+                        <td>분노, 불안</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Summary and Recommendations -->
+        <div class="section">
+            <h2>종합 분석 및 권고사항</h2>
+
+            <h3 style="color: #667eea; margin: 20px 0 10px 0;">1. 위험도 평가 요약</h3>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>고위험 (HIGH):</strong> 0개 (0%)</li>
+                <li><strong>중위험 (MEDIUM):</strong> 6개 (60%) - 협박, 모욕, 가스라이팅, 공갈 등 범죄 발언 포함</li>
+                <li><strong>저위험 (LOW):</strong> 4개 (40%) - 일반 대화 내용</li>
+            </ul>
+
+            <h3 style="color: #667eea; margin: 30px 0 10px 0;">2. 주요 범죄 유형 분석</h3>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>협박 (30.8%):</strong> 4건 검출, 긴급 위협 및 명확한 위협 발언</li>
+                <li><strong>모욕 (23.1%):</strong> 3건 검출, 욕설 및 비하 발언</li>
+                <li><strong>공갈 (15.4%):</strong> 2건 검출, 공포심 조장 및 금전 요구</li>
+                <li><strong>분노 (15.4%):</strong> 2건 검출, 조롱 및 압박</li>
+                <li><strong>사기 (15.4%):</strong> 2건 검출, 기만 및 허위 사기</li>
+            </ul>
+
+            <h3 style="color: #667eea; margin: 30px 0 10px 0;">3. 가스라이팅 패턴 분석</h3>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>전가 (40%):</strong> 8건으로 가장 빈번, 책임 및 비난 전가</li>
+                <li><strong>부정 (30%):</strong> 6건, 현실 및 기억 부정</li>
+                <li><strong>혼란 (15%):</strong> 3건, 모호 불일치 및 혼란 유발</li>
+                <li><strong>축소 (15%):</strong> 3건, 감정 및 사건 축소</li>
+            </ul>
+
+            <h3 style="color: #667eea; margin: 30px 0 10px 0;">4. 감정 상태 분석</h3>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>분노:</strong> 12회 (50%)로 가장 지배적</li>
+                <li><strong>공포:</strong> 6회 (25%), 위협적 상황 반영</li>
+                <li><strong>불안:</strong> 4회 (16.7%), 긴장된 대화 분위기</li>
+                <li><strong>혼합 감정:</strong> 분노+공포 2회</li>
+            </ul>
+
+            <h3 style="color: #667eea; margin: 30px 0 10px 0;">5. 법적 권고사항</h3>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>증거 보존:</strong> 모든 녹취 파일의 원본 보존 (파일 무결성 확보)</li>
+                <li><strong>법적 검토:</strong> 협박, 모욕, 공갈 발언에 대한 형사 책임 가능성 검토</li>
+                <li><strong>가스라이팅:</strong> 정서적 학대 및 민사 책임 소지</li>
+                <li><strong>전문가 상담:</strong> 법률 전문가 및 심리 전문가 협력 권장</li>
+                <li><strong>추가 분석:</strong> 전체 199개 파일에 대한 심층 분석 필요</li>
+            </ul>
+
+            <h3 style="color: #667eea; margin: 30px 0 10px 0;">6. 시계열적 패턴</h3>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>5월:</strong> 김경민 관련 대화, 협박 및 모욕 발언</li>
+                <li><strong>6월 초:</strong> 신기연 관련 대화, 가스라이팅 패턴 증가</li>
+                <li><strong>6월 중순:</strong> 고립/방어 패턴 및 긴급 위협 발언</li>
+                <li><strong>추이:</strong> 시간 경과에 따른 위험도 등급 변화 모니터링 필요</li>
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="section" style="text-align: center; color: #666;">
+            <p><strong>보고서 생성일:</strong> 2026년 1월 8일</p>
+            <p><strong>분석 도구:</strong> 음성 녹취 분석 시스템 v1.0</p>
+            <p><strong>기술:</strong> Whisper (STT), KoBERT (감정 분석), 규칙 기반 범죄 태깅</p>
+            <p style="margin-top: 20px; font-size: 0.9em;">
+                이 보고서는 음성 인식 기술을 기반으로 자동 생성되었으며, 법적 효력을 갖는 정식 감정 보고서는 아닙니다.
+                법적 절차에서 활용하기 위해서는 전문가의 추가 검증이 필요합니다.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Risk Distribution Chart
+        const riskCtx = document.getElementById('riskChart').getContext('2d');
+        new Chart(riskCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['중위험 (MEDIUM)', '저위험 (LOW)'],
+                datasets: [{
+                    data: [6, 4],
+                    backgroundColor: ['#f59e0b', '#10b981'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: { size: 14 }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: '위험도 등급 분포',
+                        font: { size: 18, weight: 'bold' }
+                    }
+                }
+            }
+        });
+
+        // Crime Analysis Chart
+        const crimeCtx = document.getElementById('crimeChart').getContext('2d');
+        new Chart(crimeCtx, {
+            type: 'bar',
+            data: {
+                labels: ['협박', '모욕', '공갈', '분노', '사기'],
+                datasets: [{
+                    label: '검출 건수',
+                    data: [4, 3, 2, 2, 2],
+                    backgroundColor: [
+                        '#ef4444',
+                        '#f59e0b',
+                        '#8b5cf6',
+                        '#ec4899',
+                        '#06b6d4'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: '범죄 유형별 검출 건수',
+                        font: { size: 18, weight: 'bold' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+
+        // Gaslighting Pattern Chart
+        const gaslightingCtx = document.getElementById('gaslightingChart').getContext('2d');
+        new Chart(gaslightingCtx, {
+            type: 'pie',
+            data: {
+                labels: ['전가 (Transfer)', '부정 (Denial)', '혼란 (Confusion)', '축소 (Minimization)'],
+                datasets: [{
+                    data: [8, 6, 3, 3],
+                    backgroundColor: [
+                        '#667eea',
+                        '#764ba2',
+                        '#f59e0b',
+                        '#10b981'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: { size: 14 }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: '가스라이팅 패턴 유형별 분포',
+                        font: { size: 18, weight: 'bold' }
+                    }
+                }
+            }
+        });
+
+        // Emotion Analysis Chart
+        const emotionCtx = document.getElementById('emotionChart').getContext('2d');
+        new Chart(emotionCtx, {
+            type: 'radar',
+            data: {
+                labels: ['분노', '공포', '불안', '혼합', '슬픔', '중립', '기쁨', '안정'],
+                datasets: [{
+                    label: '감정 빈도',
+                    data: [12, 6, 4, 2, 2, 1, 1, 1],
+                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(102, 126, 234, 1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: '감정 상태 레이더 차트',
+                        font: { size: 18, weight: 'bold' }
+                    }
+                },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 2
+                        }
+                    }
+                }
+            }
+        });
+
+        // Timeline Chart
+        const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+        new Chart(timelineCtx, {
+            type: 'line',
+            data: {
+                labels: ['5/15', '5/20', '5/22', '6/3', '6/4-5', '6/9-10'],
+                datasets: [{
+                    label: '위험도 점수',
+                    data: [2, 1, 2, 2, 2, 2],
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: '시계열별 위험도 추이',
+                        font: { size: 18, weight: 'bold' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 3,
+                        ticks: {
+                            callback: function(value) {
+                                const labels = ['', 'LOW', 'MEDIUM', 'HIGH'];
+                                return labels[value] || '';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Speaker Comparison Chart
+        const speakerCtx = document.getElementById('speakerChart').getContext('2d');
+        new Chart(speakerCtx, {
+            type: 'bar',
+            data: {
+                labels: ['신기연', '김경민'],
+                datasets: [
+                    {
+                        label: '총 파일 수',
+                        data: [7, 3],
+                        backgroundColor: '#667eea'
+                    },
+                    {
+                        label: '중위험 이상',
+                        data: [4, 2],
+                        backgroundColor: '#f59e0b'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: { size: 14 }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: '화자별 파일 및 위험도 비교',
+                        font: { size: 18, weight: 'bold' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
