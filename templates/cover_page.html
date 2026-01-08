@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>음성 녹취 증거 분석 보고서</title>
+    <style>
+        body {
+            font-family: 'NanumGothic', 'Malgun Gothic', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .cover-page {
+            text-align: center;
+            padding: 100px 50px;
+        }
+        .report-title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 60px;
+            line-height: 1.6;
+        }
+        .report-info {
+            font-size: 16px;
+            line-height: 2.0;
+            margin-top: 40px;
+        }
+        .report-info-row {
+            margin: 15px 0;
+        }
+        .report-info-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 150px;
+        }
+        .report-info-value {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="cover-page">
+        <div class="report-title">
+            음성 녹취 증거 분석 보고서
+        </div>
+
+        <div class="report-info">
+            <div class="report-info-row">
+                <span class="report-info-label">보고서编号:</span>
+                <span class="report-info-value">{{ report_number }}</span>
+            </div>
+            <div class="report-info-row">
+                <span class="report-info-label">사건编号:</span>
+                <span class="report-info-value">{{ case_number }}</span>
+            </div>
+            <div class="report-info-row">
+                <span class="report-info-label">작성일자:</span>
+                <span class="report-info-value">{{ report_date }}</span>
+            </div>
+            <div class="report-info-row">
+                <span class="report-info-label">분석담당자:</span>
+                <span class="report-info-value">{{ analyst_name }}</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
