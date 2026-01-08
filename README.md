@@ -217,5 +217,5 @@ MIT License
 ---
 
 **SPEC**: [SPEC-VOICE-001](.moai/specs/SPEC-VOICE-001/spec.md)
-**버전**: 0.1.0
-**상태**: Phase 1 개발 중
+**버전**: 1.0.0
+**상태**: 완료

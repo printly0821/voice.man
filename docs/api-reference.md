@@ -11,7 +11,7 @@ Voice Man 시스템의 모든 API 엔드포인트에 대한 상세 문서입니�
 
 ## 인증
 
-현재 Phase 1에서는 인증이 구현되어 있지 않습니다. Phase 2에서 JWT 인증이 추가될 예정입니다.
+현재 v1.0.0에서는 인증이 구현되어 있지 않습니다. 향후 버전에서 JWT 인증이 추가될 예정입니다.
 
 ## 공통 응답 형식
 
@@ -282,18 +282,18 @@ print(response.json())
 
 ---
 
-### 범죄 발언 태깅 결과 (예정)
+### 범죄 발언 태깅 결과
 
 #### GET /api/v1/audio/{id}/analysis/crime
 
-범죄 발언 태깅 결과를 조회합니다. (Phase 2에서 구현 예정)
+범죄 발언 태깅 결과를 조회합니다.
 
 **요청**:
 ```http
 GET /api/v1/audio/550e8400-e29b-41d4-a716-446655440000/analysis/crime HTTP/1.1
 ```
 
-**예상 응답** (200 OK):
+**성공 응답** (200 OK):
 ```json
 {
   "audio_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -313,18 +313,18 @@ GET /api/v1/audio/550e8400-e29b-41d4-a716-446655440000/analysis/crime HTTP/1.1
 
 ---
 
-### 심리 분석 결과 (예정)
+### 심리 분석 결과
 
 #### GET /api/v1/audio/{id}/analysis/psychology
 
-심리 분석 결과를 조회합니다. (Phase 2에서 구현 예정)
+심리 분석 결과를 조회합니다.
 
 **요청**:
 ```http
 GET /api/v1/audio/550e8400-e29b-41d4-a716-446655440000/analysis/psychology HTTP/1.1
 ```
 
-**예상 응답** (200 OK):
+**성공 응답** (200 OK):
 ```json
 {
   "audio_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -346,11 +346,11 @@ GET /api/v1/audio/550e8400-e29b-41d4-a716-446655440000/analysis/psychology HTTP/
 
 ---
 
-### 증거 보고서 생성 (예정)
+### 증거 보고서 생성
 
 #### POST /api/v1/audio/{id}/report
 
-증거 보고서를 생성합니다. (Phase 2에서 구현 예정)
+증거 보고서를 생성합니다.
 
 **요청**:
 ```http
@@ -365,7 +365,7 @@ Content-Type: application/json
 }
 ```
 
-**예상 응답** (200 OK):
+**성공 응답** (200 OK):
 ```json
 {
   "report_id": "990e8400-e29b-41d4-a716-446655440004",
@@ -377,18 +377,18 @@ Content-Type: application/json
 
 ---
 
-### 증거 보고서 다운로드 (예정)
+### 증거 보고서 다운로드
 
 #### GET /api/v1/audio/{id}/report
 
-생성된 증거 보고서를 다운로드합니다. (Phase 2에서 구현 예정)
+생성된 증거 보고서를 다운로드합니다.
 
 **요청**:
 ```http
 GET /api/v1/audio/550e8400-e29b-41d4-a716-446655440000/report HTTP/1.1
 ```
 
-**예상 응답** (200 OK):
+**성공 응답** (200 OK):
 ```
 Content-Type: application/pdf
 Content-Disposition: attachment; filename="evidence_report_550e8400.pdf"
@@ -420,7 +420,7 @@ Content-Disposition: attachment; filename="evidence_report_550e8400.pdf"
 
 ## 속도 제한 (Rate Limiting)
 
-현재 Phase 1에서는 속도 제한이 구현되어 있지 않습니다. Phase 2에서 다음 제한이 적용될 예정입니다:
+현재 v1.0.0에서는 속도 제한이 구현되어 있지 않습니다. 향후 버전에서 다음 제한이 적용될 예정입니다:
 
 - **익명 사용자**: 100 요청/시간
 - **인증된 사용자**: 1000 요청/시간
