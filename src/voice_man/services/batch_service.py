@@ -17,13 +17,35 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BatchConfig:
-    """Configuration for batch processing."""
+    """Configuration for batch processing.
+
+    Extended for GPU support as per SPEC-PARALLEL-001:
+    - F2: GPU-based batch inference (batch size 15-20, max 32)
+    - F5: Dynamic batch size adjustment
+    - S3: Retry queue with exponential backoff
+    """
 
     batch_size: int = 5
     max_workers: int = 4
     retry_count: int = 3
     continue_on_error: bool = True
     enable_memory_cleanup: bool = True  # Enable gc.collect() between batches
+
+    # GPU-specific settings (SPEC-PARALLEL-001)
+    use_gpu: bool = False
+    gpu_batch_size: int = 15  # F2: Default GPU batch size
+    dynamic_batch_adjustment: bool = True  # F5: Enable dynamic adjustment
+    min_batch_size: int = 2  # Minimum batch size floor
+    max_batch_size: int = 32  # F2: Maximum batch size ceiling
+
+    def __post_init__(self):
+        """Apply GPU-optimized defaults when use_gpu is True."""
+        if self.use_gpu:
+            # Override with GPU-optimized settings if not explicitly set
+            if self.batch_size == 5:  # Default CPU value
+                self.batch_size = self.gpu_batch_size
+            if self.max_workers == 4:  # Default CPU value
+                self.max_workers = 16  # Optimized for GPU parallelism
 
 
 @dataclass
@@ -316,3 +338,18 @@ class BatchProcessor:
             List of failed file paths
         """
         return self.progress.failed_files.copy()
+
+    def get_retry_info(self) -> Dict:
+        """Get retry configuration information.
+
+        Returns:
+            Dictionary with retry settings
+
+        Implements:
+            S3: Retry queue with exponential backoff (3 retries)
+        """
+        return {
+            "max_retries": self.config.retry_count,
+            "backoff_strategy": "exponential",
+            "continue_on_error": self.config.continue_on_error,
+        }
