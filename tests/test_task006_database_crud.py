@@ -20,7 +20,7 @@ import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.voice_man.models.database import AudioFile, Base, Transcript, TranscriptSegment
+from voice_man.models.database import AudioFile, Base, Transcript, TranscriptSegment
 
 
 class TestDatabaseSetup:

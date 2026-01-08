@@ -17,7 +17,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 
-from src.voice_man.main import app
+from voice_man.main import app
 
 
 class TestE2EPipeline:
@@ -61,7 +61,7 @@ class TestE2EPipeline:
             transport=httpx.ASGITransport(app=app), base_url="http://test"
         ) as client:
             # Step 1: 파일 업로드
-            with patch("src.voice_man.main.compute_sha256_hash") as mock_hash:
+            with patch("voice_man.main.compute_sha256_hash") as mock_hash:
                 mock_hash.return_value = "a" * 64
 
                 upload_response = await client.post("/api/v1/audio/upload", files=files)
@@ -102,7 +102,7 @@ class TestGherkinScenarios:
         async with AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://test"
         ) as client:
-            with patch("src.voice_man.main.compute_sha256_hash") as mock_hash:
+            with patch("voice_man.main.compute_sha256_hash") as mock_hash:
                 mock_hash.return_value = "1" * 64
 
                 response = await client.post("/api/v1/audio/upload", files=files)
@@ -154,7 +154,7 @@ class TestGherkinScenarios:
         async with AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://test"
         ) as client:
-            with patch("src.voice_man.main.compute_sha256_hash") as mock_hash:
+            with patch("voice_man.main.compute_sha256_hash") as mock_hash:
                 mock_hash.return_value = "2" * 64
 
                 # 업로드는 성공해야 함 (파일 형식 검증만 통과하면 됨)
@@ -184,7 +184,7 @@ class TestAPIResponseTime:
         async with AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://test"
         ) as client:
-            with patch("src.voice_man.main.compute_sha256_hash") as mock_hash:
+            with patch("voice_man.main.compute_sha256_hash") as mock_hash:
                 mock_hash.return_value = "3" * 64
 
                 start_time = time.time()

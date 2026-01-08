@@ -11,7 +11,7 @@ Test coverage for:
 import pytest
 from pathlib import Path
 from io import BytesIO
-from src.voice_man.services.pdf_service import PDFService
+from voice_man.services.pdf_service import PDFService
 
 
 class TestPDFServiceInitialization:
