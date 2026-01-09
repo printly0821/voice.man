@@ -1,0 +1,92 @@
+{
+  "version": "1.0.0",
+  "description": "강압 언어 패턴 데이터베이스 (한국어)",
+  "source": "Psychological Coercion Research 2024, Domestic Violence Studies 2025",
+  "last_updated": "2026-01-09",
+  "patterns": [
+    {
+      "type": "emotional",
+      "type_ko": "감정적강압",
+      "description_ko": "감정적 압박을 통해 상대방을 통제하려는 패턴",
+      "description_en": "Pattern of controlling through emotional pressure",
+      "severity_weight": 0.8,
+      "patterns_ko": [
+        "나를 사랑하면",
+        "나를 위해서",
+        "나 진짜 힘들어",
+        "나 어떻게 하면 좋아",
+        "나 없으면 어떻게 할 거야",
+        "나한테 이럴 수 있어?",
+        "나 진심인데",
+        "내 마음을 몰라주네",
+        "나한테 왜 이래",
+        "날 버리는 거야?",
+        "나 떠나면 후회할 거야",
+        "내가 얼마나 힘든지 알아?"
+      ],
+      "patterns_en": [
+        "If you loved me",
+        "For my sake",
+        "I'm really struggling",
+        "What will you do without me",
+        "How could you do this to me"
+      ]
+    },
+    {
+      "type": "guilt_induction",
+      "type_ko": "죄책감유발",
+      "description_ko": "상대방에게 죄책감을 느끼게 하여 행동을 강요하는 패턴",
+      "description_en": "Pattern of forcing actions by inducing guilt in the other person",
+      "severity_weight": 0.75,
+      "patterns_ko": [
+        "네가 이런 줄 몰랐어",
+        "너 때문에 내가 이 꼴이야",
+        "넌 항상 그래",
+        "내가 뭘 잘못했길래",
+        "네가 나한테 해준 게 뭔데",
+        "나한테 빚진 거 알지?",
+        "내가 그동안 얼마나 참았는데",
+        "네가 먼저 그랬잖아",
+        "어떻게 나한테 이럴 수 있어",
+        "넌 날 이용만 해",
+        "은혜도 모르는",
+        "배은망덕하게"
+      ],
+      "patterns_en": [
+        "I never knew you were like this",
+        "Look what you made me become",
+        "You always do this",
+        "What did I do wrong",
+        "You owe me"
+      ]
+    },
+    {
+      "type": "isolation",
+      "type_ko": "고립화",
+      "description_ko": "상대방을 사회적으로 고립시키려는 패턴",
+      "description_en": "Pattern of trying to socially isolate the other person",
+      "severity_weight": 0.85,
+      "patterns_ko": [
+        "그 친구 만나지 마",
+        "가족이랑 연락하지 마",
+        "왜 자꾸 밖에 나가?",
+        "나만 보면 안 돼?",
+        "그 사람들이 널 이용하는 거야",
+        "나밖에 없어",
+        "다들 널 싫어해",
+        "아무도 널 이해 못해",
+        "나만 널 이해해",
+        "그 사람들 다 나쁜 사람들이야",
+        "혼자 어디 가?",
+        "나한테 허락받아"
+      ],
+      "patterns_en": [
+        "Don't meet that friend",
+        "Don't contact your family",
+        "Why do you keep going out",
+        "Can't you just be with me",
+        "They're using you"
+      ]
+    }
+  ]
+}

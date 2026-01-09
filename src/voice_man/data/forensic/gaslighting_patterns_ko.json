@@ -1,0 +1,180 @@
+{
+  "version": "1.0.0",
+  "description": "가스라이팅 언어 패턴 데이터베이스 (한국어)",
+  "source": "Armenian Folia Anglistika 2024, Speech Acts analysis 2025",
+  "last_updated": "2026-01-09",
+  "patterns": [
+    {
+      "type": "denial",
+      "type_ko": "부정",
+      "description_ko": "상대방의 경험이나 기억을 부정하는 패턴",
+      "description_en": "Pattern of denying the other person's experience or memory",
+      "severity_weight": 0.8,
+      "patterns_ko": [
+        "그런 적 없어",
+        "내가 언제 그랬어",
+        "네가 잘못 들은 거야",
+        "그건 사실이 아니야",
+        "그런 거 없었는데",
+        "네가 잘못 기억하는 거야",
+        "상상한 거지",
+        "그건 없었던 일이야",
+        "거짓말하지 마",
+        "말도 안 되는 소리해"
+      ],
+      "patterns_en": [
+        "That never happened",
+        "I never said that",
+        "You must have heard wrong",
+        "That's not true"
+      ]
+    },
+    {
+      "type": "countering",
+      "type_ko": "반박",
+      "description_ko": "상대방의 기억이 틀렸다고 주장하며 반박하는 패턴",
+      "description_en": "Pattern of countering by claiming the other person's memory is wrong",
+      "severity_weight": 0.7,
+      "patterns_ko": [
+        "네 기억이 틀린 거야",
+        "그때 넌 취해 있었잖아",
+        "네가 착각하는 거야",
+        "네가 헷갈린 거야",
+        "정신 똑바로 차려",
+        "제대로 기억 좀 해",
+        "네가 잘못 알고 있어",
+        "사실 확인 좀 해",
+        "니가 뭘 알아"
+      ],
+      "patterns_en": [
+        "Your memory is wrong",
+        "You were drunk then",
+        "You're confused",
+        "You're mistaken"
+      ]
+    },
+    {
+      "type": "trivializing",
+      "type_ko": "최소화",
+      "description_ko": "상대방의 감정이나 경험을 축소하고 과민반응이라고 치부하는 패턴",
+      "description_en": "Pattern of minimizing the other person's feelings or experiences",
+      "severity_weight": 0.6,
+      "patterns_ko": [
+        "별거 아닌데 왜 그래",
+        "너무 예민해",
+        "오버하지 마",
+        "그게 뭐가 대수야",
+        "과민반응하지 마",
+        "그 정도로 화내?",
+        "크게 문제 아닌데",
+        "그냥 농담이었어",
+        "왜 그렇게 예민해",
+        "별일 아니야"
+      ],
+      "patterns_en": [
+        "You're overreacting",
+        "You're too sensitive",
+        "Don't make a big deal out of it",
+        "It was just a joke"
+      ]
+    },
+    {
+      "type": "diverting",
+      "type_ko": "화제전환",
+      "description_ko": "대화 주제를 바꾸거나 회피하는 패턴",
+      "description_en": "Pattern of diverting or changing the subject of conversation",
+      "severity_weight": 0.5,
+      "patterns_ko": [
+        "그게 지금 중요해?",
+        "딴 소리 하지 마",
+        "지금 그 얘기 왜 해",
+        "그건 나중에 얘기해",
+        "주제 벗어나지 마",
+        "본론만 얘기해",
+        "쓸데없는 소리 그만해",
+        "그래서 뭐 어쩌라고",
+        "다른 얘기 하자"
+      ],
+      "patterns_en": [
+        "That's not important now",
+        "Stop changing the subject",
+        "Why bring that up now",
+        "Let's talk about something else"
+      ]
+    },
+    {
+      "type": "blocking",
+      "type_ko": "차단",
+      "description_ko": "대화 자체를 막거나 차단하는 패턴",
+      "description_en": "Pattern of blocking or shutting down the conversation",
+      "severity_weight": 0.7,
+      "patterns_ko": [
+        "더 이상 말하지 마",
+        "그만해",
+        "닥쳐",
+        "입 다물어",
+        "말 끊지 마",
+        "말대꾸하지 마",
+        "대들지 마",
+        "말 안 통해",
+        "듣기 싫어",
+        "얘기 끝났어"
+      ],
+      "patterns_en": [
+        "Shut up",
+        "Stop talking",
+        "I don't want to hear it",
+        "This conversation is over"
+      ]
+    },
+    {
+      "type": "blame_shifting",
+      "type_ko": "책임전가",
+      "description_ko": "책임을 상대방에게 돌리고 피해자가 가해자라고 주장하는 패턴",
+      "description_en": "Pattern of shifting blame to the other person",
+      "severity_weight": 0.9,
+      "patterns_ko": [
+        "네가 그렇게 만든 거야",
+        "네 탓이야",
+        "네가 나를 화나게 했어",
+        "너 때문이야",
+        "네가 먼저 그랬어",
+        "네가 그렇게 해서",
+        "너부터 잘해",
+        "네가 문제야",
+        "네 행동 때문이야",
+        "네가 원인이야"
+      ],
+      "patterns_en": [
+        "You made me do it",
+        "It's your fault",
+        "You made me angry",
+        "This is because of you"
+      ]
+    },
+    {
+      "type": "reality_distortion",
+      "type_ko": "현실왜곡",
+      "description_ko": "현실을 왜곡하여 피해자가 가해자에게 의존하도록 만드는 패턴",
+      "description_en": "Pattern of distorting reality to make the victim dependent on the abuser",
+      "severity_weight": 0.85,
+      "patterns_ko": [
+        "다 널 위해서야",
+        "내가 너 아니면 누가 챙겨",
+        "네가 날 필요로 하잖아",
+        "나 없으면 못 살잖아",
+        "다 내가 잘해줬잖아",
+        "내가 너한테 얼마나 잘하는데",
+        "나만큼 널 위하는 사람 없어",
+        "다 너 좋으라고 하는 거야",
+        "감사할 줄 알아야지"
+      ],
+      "patterns_en": [
+        "I'm doing this for you",
+        "No one else would put up with you",
+        "You need me",
+        "You can't live without me"
+      ]
+    }
+  ]
+}
