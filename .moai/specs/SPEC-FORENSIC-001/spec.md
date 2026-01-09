@@ -30,6 +30,7 @@ lifecycle: "spec-anchored"
 |------|------|--------|-----------|
 | 1.0.0 | 2026-01-09 | 지니 | 초안 작성 - 범죄 프로파일링 기반 음성 포렌식 분석 시스템 요구사항 정의 |
 | 1.1.0 | 2026-01-09 | 지니 | Phase 2 완료 - 범죄 언어 패턴 DB, SER 서비스, 텍스트-음성 교차검증, 포렌식 스코어링 구현 |
+| 1.2.0 | 2026-01-09 | 지니 | Phase 3-4 완료 - HTML/PDF 보고서 생성, Mermaid 다이어그램 시각화, ARM64 CUDA 지원 |
 
 ---
 
@@ -869,12 +870,18 @@ src/voice_man/
 │       ├── emotion_recognition.py        # SER 감정 인식 데이터 모델
 │       ├── cross_validation.py           # 교차검증 데이터 모델
 │       └── forensic_score.py             # 포렌식 스코어 데이터 모델
-└── data/
-    └── forensic/                         # 포렌식 분석 데이터 저장소 (범죄 언어 패턴 DB)
+├── reports/
+│   ├── __init__.py
+│   ├── html_generator.py                 # HTML 보고서 생성 (Mermaid 포함)
+│   └── pdf_generator.py                  # PDF 변환 (Playwright)
+└── scripts/
+    └── generate_forensic_report.py       # 보고서 생성 CLI
 ```
 
 **Phase 1 (완료)**: 음성 특성 분석, 스트레스 분석
 **Phase 2 (완료)**: 범죄 언어 패턴 DB, SER 서비스, 텍스트-음성 교차검증, 포렌식 스코어링
+**Phase 3 (완료)**: HTML 보고서 생성, Mermaid 다이어그램 시각화
+**Phase 4 (완료)**: PDF 변환 (Playwright), ARM64 CUDA 지원
 
 ---
 

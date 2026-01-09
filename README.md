@@ -52,7 +52,7 @@ flowchart TD
 ## 기술 스택
 
 ### 백엔드
-- **Python 3.13+**: 핵심 개발 언어
+- **Python 3.12**: 핵심 개발 언어 (ARM64 CUDA 호환성)
 - **FastAPI 0.115+**: 고성능 비동기 웹 프레임워크
 - **SQLAlchemy 2.0+**: 비동기 ORM
 - **Pydantic 2.9+**: 데이터 검증 및 직렬화
@@ -89,7 +89,7 @@ flowchart TD
 ## 시스템 요구사항
 
 ### 최소 요구사항
-- Python 3.13+
+- Python 3.12 (ARM64 CUDA 호환성)
 - 최소 16GB RAM
 - 최소 100GB SSD 저장 공간
 
@@ -340,6 +340,60 @@ print(result["text"])
 
 Voice Man은 범죄 프로파일링 기법과 음성 포렌식 학술 연구를 기반으로 한 고급 음성 분석 기능을 제공합니다.
 
+### Phase 3: HTML/PDF 보고서 생성
+
+음성 포렌식 분석 결과를 시각적이고 법적 증거로 활용 가능한 형태의 보고서로 생성합니다.
+
+#### 보고서 생성 CLI
+
+```bash
+# 기본 보고서 생성 (HTML + PDF)
+uv run python scripts/generate_forensic_report.py --input-dir ref/call
+
+# 특정 파일만 보고서 생성
+uv run python scripts/generate_forensic_report.py --input-dir ref/call --file-pattern "2024*"
+
+# 출력 디렉토리 지정
+uv run python scripts/generate_forensic_report.py --input-dir ref/call --output-dir reports/forensic
+```
+
+#### 보고서 포함 내용
+
+| 섹션 | 설명 |
+|------|------|
+| 분석 요약 | 전체 분석 결과 개요, 위험 등급, 주요 발견 사항 |
+| 화자 프로파일 | 화자별 음성 특성, 발화 패턴, 심리 지표 |
+| 가스라이팅 타임라인 | 시간 경과에 따른 가스라이팅 패턴 변화 |
+| 음성 특성 분석 | 음량, 피치, 말 속도, 스트레스 지표 시각화 |
+| 범죄 언어 패턴 | 탐지된 범죄 언어 패턴 목록 및 빈도 |
+| 감정 분석 | Speech Emotion Recognition 결과 및 교차검증 |
+| 위험 구간 하이라이트 | 감정 격화 구간, 고위험 발화 목록 |
+| Mermaid 다이어그램 | 시스템 아키텍처, 분석 파이프라인 시각화 |
+
+### Phase 4: ARM64 CUDA 지원
+
+NVIDIA Grace Hopper Superchip (GB10) 등 ARM64 아키텍처에서 CUDA 가속을 지원합니다.
+
+#### ARM64 환경 설정
+
+```bash
+# ARM64 + CUDA 호환 PyTorch 설치
+pip install torch --index-url https://download.pytorch.org/whl/cu121
+
+# WhisperX ARM64 호환 버전
+pip install whisperx==3.1.5
+```
+
+#### ARM64 GPU 모니터링
+
+```python
+from voice_man.services.gpu_monitor_service import GPUMonitorService
+
+gpu_monitor = GPUMonitorService()
+print(f"ARM64 GPU: {gpu_monitor.is_gpu_available()}")
+print(f"플랫폼: {gpu_monitor.get_platform()}")
+```
+
 ### Phase 1: 음성 특성 분석
 
 | 분석 항목 | 설명 | 출력 |
@@ -512,5 +566,5 @@ MIT License
 - [SPEC-E2ETEST-001](.moai/specs/SPEC-E2ETEST-001/spec.md) - E2E 통합 테스트 (GPU 병렬 배치 처리)
 - [SPEC-FORENSIC-001](.moai/specs/SPEC-FORENSIC-001/spec.md) - 범죄 프로파일링 기반 음성 포렌식 분석
 
-**버전**: 1.3.0
+**버전**: 1.4.0
 **상태**: 완료
