@@ -3,7 +3,9 @@ name = "voice-man"
 version = "0.1.0"
 description = "음성 녹취 증거 분석 시스템"
 readme = "README.md"
-requires-python = ">=3.13"
+# NOTE: Python 3.12 is REQUIRED for WhisperX on ARM64
+# Python 3.13 has incompatible torchaudio/pyannote-audio dependencies
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
@@ -15,7 +17,6 @@ dependencies = [
     "python-multipart>=0.0.17",
     "aiofiles>=24.1.0",
     "ffmpeg-python>=0.2.0",
-    "openai-whisper>=20231117",
     "psutil>=6.0.0",
 ]
 
@@ -28,13 +29,33 @@ dev = [
     "ruff>=0.8.0",
 ]
 
+# WhisperX with speaker diarization (requires CUDA on ARM64)
+# IMPORTANT: torch/torchaudio MUST be installed separately from PyTorch wheel index
+# See scripts/install-cuda-deps-py312.sh for ARM64 installation
+# Compatible versions (verified 2026-01-08):
+#   - torch==2.8.0+cu129 (from PyTorch wheel index, NOT PyPI)
+#   - torchaudio==2.8.0 (from PyTorch wheel index)
+#   - torchvision==0.23.0 (from PyTorch wheel index)
+whisperx = [
+    "whisperx>=3.1.6",
+    "pyannote-audio>=3.3.2,<4.0.0",
+    "faster-whisper>=1.1.1",
+    "transformers>=4.48.0",
+    "ctranslate2>=4.5.0",
+]
+
+# Basic Whisper (CPU-only, no speaker diarization)
+whisper-cpu = [
+    "openai-whisper>=20231117",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py312"
 
 [tool.ruff.lint]
 ignore = ["E402", "F401"]  # Module level import not at top of file (for dynamic imports), unused imports
@@ -42,3 +63,7 @@ ignore = ["E402", "F401"]  # Module level import not at top of file (for dynamic
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "e2e: End-to-end integration tests",
+    "slow: Slow tests that may take a long time to run",
+]
