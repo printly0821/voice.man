@@ -1,7 +1,7 @@
 ---
 id: SPEC-FORENSIC-001
 version: "1.0.0"
-status: "in_progress"
+status: "completed"
 created: "2026-01-09"
 updated: "2026-01-09"
 author: "지니"
@@ -29,6 +29,7 @@ lifecycle: "spec-anchored"
 | 버전 | 날짜 | 작성자 | 변경 내용 |
 |------|------|--------|-----------|
 | 1.0.0 | 2026-01-09 | 지니 | 초안 작성 - 범죄 프로파일링 기반 음성 포렌식 분석 시스템 요구사항 정의 |
+| 1.1.0 | 2026-01-09 | 지니 | Phase 2 완료 - 범죄 언어 패턴 DB, SER 서비스, 텍스트-음성 교차검증, 포렌식 스코어링 구현 |
 
 ---
 
@@ -846,34 +847,34 @@ class ForensicReport:
 [시각화] [법적증거] [심리분석] [범죄프로파일링]
 ```
 
-### 7.3 구현 파일 (예정)
+### 7.3 구현 파일 (완료)
 
 ```
 src/voice_man/
 ├── services/
-│   ├── forensic/
-│   │   ├── __init__.py
-│   │   ├── audio_feature_service.py      # F1, F2, F3 - 음량/피치/속도
-│   │   ├── stress_analysis_service.py    # F4 - 스트레스 분석
-│   │   ├── ser_service.py                # F5 - Speech Emotion Recognition
-│   │   ├── timeline_analysis_service.py  # F6 - 가스라이팅 시계열
-│   │   ├── pressure_index_service.py     # F7 - 심리 압박 지수
-│   │   └── forensic_report_service.py    # F9 - 리포트 생성
-│   └── visualization/
+│   └── forensic/
 │       ├── __init__.py
-│       ├── timeline_visualizer.py        # F8 - 타임라인
-│       ├── emotion_chart.py              # F8 - 감정 차트
-│       ├── heatmap_generator.py          # F8 - 히트맵
-│       └── dashboard_service.py          # F8 - 대시보드
+│       ├── audio_feature_service.py      # F1, F2, F3 - 음량/피치/속도 분석
+│       ├── stress_analysis_service.py    # F4 - 스트레스 분석
+│       ├── crime_language_pattern_db.py  # 범죄 언어 패턴 DB (가스라이팅, 위협, 강압, 기만)
+│       ├── crime_language_service.py     # 범죄 언어 탐지 서비스
+│       ├── ser_service.py                # F5 - Speech Emotion Recognition (wav2vec2, SpeechBrain)
+│       ├── cross_validation_service.py   # 텍스트-음성 교차검증 (감정 불일치 탐지)
+│       └── forensic_scoring_service.py   # F7, F9 - 포렌식 스코어링 및 리포트 생성
 ├── models/
 │   └── forensic/
-│       ├── audio_features.py
-│       ├── stress_analysis.py
-│       ├── emotion_recognition.py
-│       └── forensic_report.py
-└── config/
-    └── forensic_config.py
+│       ├── __init__.py
+│       ├── audio_features.py             # 음성 특성 데이터 모델
+│       ├── crime_language.py             # 범죄 언어 패턴 데이터 모델
+│       ├── emotion_recognition.py        # SER 감정 인식 데이터 모델
+│       ├── cross_validation.py           # 교차검증 데이터 모델
+│       └── forensic_score.py             # 포렌식 스코어 데이터 모델
+└── data/
+    └── forensic/                         # 포렌식 분석 데이터 저장소 (범죄 언어 패턴 DB)
 ```
+
+**Phase 1 (완료)**: 음성 특성 분석, 스트레스 분석
+**Phase 2 (완료)**: 범죄 언어 패턴 DB, SER 서비스, 텍스트-음성 교차검증, 포렌식 스코어링
 
 ---
 
