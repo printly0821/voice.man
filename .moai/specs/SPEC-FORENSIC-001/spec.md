@@ -1,7 +1,7 @@
 ---
 id: SPEC-FORENSIC-001
 version: "1.0.0"
-status: "planned"
+status: "in_progress"
 created: "2026-01-09"
 updated: "2026-01-09"
 author: "지니"

@@ -16,6 +16,7 @@ Voice Man은 음성 녹취 파일을 텍스트로 변환하고, 법적 증거로
 - **pyannote-audio 화자 분리**: 자동 화자 구분 및 레이블링 (DER < 15%)
 - **범죄 발언 자동 태깅**: 협박, 공갈, 사기, 모욕 유형 자동 감지
 - **심리 분석**: 가스라이팅 패턴 및 감정 분석
+- **음성 포렌식 분석**: 음량/피치/말속도 분석, 스트레스 지표 추출, 감정 격화 구간 감지
 - **법적 증거 보고서 생성**: PDF 형식의 종합 보고서
 - **GPU 병렬 처리**: CUDA 기반 고성능 배치 처리 (50배 성능 향상)
 - **WhisperX 통합 파이프라인**: STT + 타임스탬프 정렬 + 화자분리 end-to-end GPU 처리
@@ -65,6 +66,10 @@ flowchart TD
 - **transformers 4.36.0+**: WAV2VEC2 모델 백엔드
 - **huggingface-hub 0.20.0+**: 모델 다운로드 및 인증
 - **FFmpeg 6.0+**: 오디오 전처리
+
+### 음성 포렌식 분석
+- **librosa 0.10.2+**: 음향 특성 추출 (RMS, F0, spectral)
+- **parselmouth 0.4.3+**: Praat 기반 음성학 분석 (jitter, shimmer, HNR, formant)
 
 ### GPU 가속 및 병렬 처리
 - **PyTorch 2.5+**: GPU 연산 프레임워크
@@ -232,7 +237,9 @@ voice.man/
 │       │   ├── database.py         # SQLAlchemy 모델
 │       │   ├── diarization.py      # 화자 분리 모델
 │       │   ├── whisper_model.py    # faster-whisper 래퍼 (GPU/CPU 자동 선택)
-│       │   └── whisperx_pipeline.py    # WhisperX 통합 파이프라인
+│       │   ├── whisperx_pipeline.py    # WhisperX 통합 파이프라인
+│       │   └── forensic/
+│       │       └── audio_features.py   # 포렌식 오디오 특성 모델
 │       ├── config/
 │       │   └── whisperx_config.py      # WhisperX 설정 관리
 │       └── services/
@@ -246,7 +253,10 @@ voice.man/
 │           ├── memory_service.py           # 메모리 관리 서비스
 │           ├── analysis_pipeline_service.py # 분석 파이프라인 (GPU 통합)
 │           ├── performance_report_service.py # 성능 리포트 생성
-│           └── e2e_test_service.py           # E2E 테스트 서비스
+│           ├── e2e_test_service.py           # E2E 테스트 서비스
+│           └── forensic/
+│               ├── audio_feature_service.py    # 음량/피치/말속도 분석
+│               └── stress_analysis_service.py  # 스트레스 분석
 ├── tests/
 │   ├── unit/                       # 단위 테스트
 │   ├── integration/                # 통합 테스트
@@ -316,6 +326,63 @@ result = model.transcribe("audio.wav", language="ko")
 print(result["text"])
 ```
 
+## 음성 포렌식 분석 (SPEC-FORENSIC-001)
+
+Voice Man은 범죄 프로파일링 기법과 음성 포렌식 학술 연구를 기반으로 한 고급 음성 분석 기능을 제공합니다.
+
+### 음성 특성 분석
+
+| 분석 항목 | 설명 | 출력 |
+|-----------|------|------|
+| 음량 분석 | RMS/Peak amplitude, 다이나믹 레인지 | dB 단위 |
+| 피치 분석 | F0 평균/편차/범위, Jitter | Hz, 세미톤 |
+| 말 속도 분석 | WPM, 발화/무음 비율, 휴지 감지 | WPM, ratio |
+
+### 스트레스 분석
+
+Voice Stress Analysis(VSA) 기법을 활용하여 음성에서 스트레스 지표를 추출합니다:
+
+| 지표 | 설명 | 정상 범위 |
+|------|------|----------|
+| Shimmer | 진폭 미세 변동 | < 3% |
+| HNR | 조화음 대 잡음 비율 | > 20dB |
+| Formant Stability | 포먼트 안정성 | > 70% |
+| Stress Index | 종합 스트레스 지수 | 0-100 |
+
+### 감정 격화 구간 감지
+
+음량과 피치의 급격한 변화를 감지하여 감정 격화 구간을 자동으로 태깅합니다:
+
+- 음량 기준: 기준치 대비 150% 이상 증가
+- 피치 기준: 50Hz 이상 급격한 변화
+- 강도 점수: 0-1 범위로 정규화
+
+### 사용 예시
+
+```python
+from voice_man.services.forensic.audio_feature_service import AudioFeatureService
+from voice_man.services.forensic.stress_analysis_service import StressAnalysisService
+import librosa
+
+# 오디오 로드
+audio, sr = librosa.load("recording.wav", sr=16000)
+
+# 음성 특성 분석
+feature_service = AudioFeatureService()
+analysis = feature_service.analyze_audio_features(
+    audio=audio,
+    sr=sr,
+    file_path="recording.wav"
+)
+
+# 결과 확인
+print(f"음량 (RMS): {analysis.volume_features.rms_db:.1f} dB")
+print(f"피치 (F0): {analysis.pitch_features.f0_mean_hz:.1f} Hz")
+print(f"스트레스 지수: {analysis.stress_features.stress_index:.1f}")
+print(f"위험 수준: {analysis.stress_features.risk_level}")
+print(f"감정 격화 구간: {len(analysis.escalation_zones)}개 감지")
+```
+
 ## 라이선스
 
 MIT License
@@ -335,6 +402,7 @@ MIT License
 - [SPEC-PARALLEL-001](.moai/specs/SPEC-PARALLEL-001/spec.md) - GPU 병렬처리 최적화
 - [SPEC-WHISPERX-001](.moai/specs/SPEC-WHISPERX-001/spec.md) - WhisperX 통합 파이프라인
 - [SPEC-E2ETEST-001](.moai/specs/SPEC-E2ETEST-001/spec.md) - E2E 통합 테스트 (GPU 병렬 배치 처리)
+- [SPEC-FORENSIC-001](.moai/specs/SPEC-FORENSIC-001/spec.md) - 범죄 프로파일링 기반 음성 포렌식 분석
 
 **버전**: 1.3.0
 **상태**: 완료
