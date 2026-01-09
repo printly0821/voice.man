@@ -16,6 +16,7 @@ Voice Man은 음성 녹취 파일을 텍스트로 변환하고, 법적 증거로
 - **pyannote-audio 화자 분리**: 자동 화자 구분 및 레이블링 (DER < 15%)
 - **범죄 발언 자동 태깅**: 협박, 공갈, 사기, 모욕 유형 자동 감지
 - **심리 분석**: 가스라이팅 패턴 및 감정 분석
+- **음성 포렌식 분석**: 음량/피치/말속도 분석, 스트레스 지표 추출, 감정 격화 구간 감지
 - **법적 증거 보고서 생성**: PDF 형식의 종합 보고서
 - **GPU 병렬 처리**: CUDA 기반 고성능 배치 처리 (50배 성능 향상)
 - **WhisperX 통합 파이프라인**: STT + 타임스탬프 정렬 + 화자분리 end-to-end GPU 처리
@@ -65,6 +66,10 @@ flowchart TD
 - **transformers 4.36.0+**: WAV2VEC2 모델 백엔드
 - **huggingface-hub 0.20.0+**: 모델 다운로드 및 인증
 - **FFmpeg 6.0+**: 오디오 전처리
+
+### 음성 포렌식 분석
+- **librosa 0.10.2+**: 음향 특성 추출 (RMS, F0, spectral)
+- **parselmouth 0.4.3+**: Praat 기반 음성학 분석 (jitter, shimmer, HNR, formant)
 
 ### GPU 가속 및 병렬 처리
 - **PyTorch 2.5+**: GPU 연산 프레임워크
@@ -232,7 +237,13 @@ voice.man/
 │       │   ├── database.py         # SQLAlchemy 모델
 │       │   ├── diarization.py      # 화자 분리 모델
 │       │   ├── whisper_model.py    # faster-whisper 래퍼 (GPU/CPU 자동 선택)
-│       │   └── whisperx_pipeline.py    # WhisperX 통합 파이프라인
+│       │   ├── whisperx_pipeline.py    # WhisperX 통합 파이프라인
+│       │   └── forensic/
+│       │       ├── audio_features.py   # 포렌식 오디오 특성 모델
+│       │       ├── crime_language.py   # 범죄 언어 패턴 모델
+│       │       ├── emotion_recognition.py  # SER 감정 인식 모델
+│       │       ├── cross_validation.py     # 텍스트-음성 교차검증 모델
+│       │       └── forensic_score.py       # 포렌식 스코어링 모델
 │       ├── config/
 │       │   └── whisperx_config.py      # WhisperX 설정 관리
 │       └── services/
@@ -246,7 +257,15 @@ voice.man/
 │           ├── memory_service.py           # 메모리 관리 서비스
 │           ├── analysis_pipeline_service.py # 분석 파이프라인 (GPU 통합)
 │           ├── performance_report_service.py # 성능 리포트 생성
-│           └── e2e_test_service.py           # E2E 테스트 서비스
+│           ├── e2e_test_service.py           # E2E 테스트 서비스
+│           └── forensic/
+│               ├── audio_feature_service.py    # 음량/피치/말속도 분석
+│               ├── stress_analysis_service.py  # 스트레스 분석
+│               ├── crime_language_pattern_db.py    # 범죄 언어 패턴 DB
+│               ├── crime_language_service.py       # 범죄 언어 탐지 서비스
+│               ├── ser_service.py                  # Speech Emotion Recognition
+│               ├── cross_validation_service.py     # 텍스트-음성 교차검증
+│               └── forensic_scoring_service.py    # 포렌식 스코어링 서비스
 ├── tests/
 │   ├── unit/                       # 단위 테스트
 │   ├── integration/                # 통합 테스트
@@ -264,7 +283,8 @@ voice.man/
 │   └── e2e_batch_test.py           # E2E 배치 테스트 스크립트
 ├── docs/                           # 문서
 ├── data/
-│   └── uploads/                    # 업로드된 오디오 파일
+│   ├── uploads/                    # 업로드된 오디오 파일
+│   └── forensic/                   # 포렌식 분석 데이터 저장소
 ├── pyproject.toml                  # 프로젝트 설정
 ├── README.md                       # 이 파일
 └── CHANGELOG.md                    # 변경 이력
@@ -316,6 +336,161 @@ result = model.transcribe("audio.wav", language="ko")
 print(result["text"])
 ```
 
+## 음성 포렌식 분석 (SPEC-FORENSIC-001)
+
+Voice Man은 범죄 프로파일링 기법과 음성 포렌식 학술 연구를 기반으로 한 고급 음성 분석 기능을 제공합니다.
+
+### Phase 1: 음성 특성 분석
+
+| 분석 항목 | 설명 | 출력 |
+|-----------|------|------|
+| 음량 분석 | RMS/Peak amplitude, 다이나믹 레인지 | dB 단위 |
+| 피치 분석 | F0 평균/편차/범위, Jitter | Hz, 세미톤 |
+| 말 속도 분석 | WPM, 발화/무음 비율, 휴지 감지 | WPM, ratio |
+
+### 스트레스 분석
+
+Voice Stress Analysis(VSA) 기법을 활용하여 음성에서 스트레스 지표를 추출합니다:
+
+| 지표 | 설명 | 정상 범위 |
+|------|------|----------|
+| Shimmer | 진폭 미세 변동 | < 3% |
+| HNR | 조화음 대 잡음 비율 | > 20dB |
+| Formant Stability | 포먼트 안정성 | > 70% |
+| Stress Index | 종합 스트레스 지수 | 0-100 |
+
+### 감정 격화 구간 감지
+
+음량과 피치의 급격한 변화를 감지하여 감정 격화 구간을 자동으로 태깅합니다:
+
+- 음량 기준: 기준치 대비 150% 이상 증가
+- 피치 기준: 50Hz 이상 급격한 변화
+- 강도 점수: 0-1 범위로 정규화
+
+### Phase 2: 고급 포렌식 분석
+
+#### 범죄 언어 패턴 데이터베이스
+
+국내 범죄 프로파일링 연구를 기반으로 한 범죄 언어 패턴 DB를 제공합니다:
+
+| 패턴 유형 | 세부 패턴 | 설명 |
+|-----------|----------|------|
+| **가스라이팅 (7종)** | 현실 부정 | 피해자의 기억이나 인식을 부정 |
+| | 전가(轉嫁) | 책임을 피해자에게 전가 |
+| | 축소/왜곡 | 피해자의 감정이나 경험을 과소평가 |
+| | 혼란 유발 | 모순된 말로 피해자 혼란 유도 |
+| | 의심 조장 | 피해자의 판단력/기억력 의심 |
+| | 고립화 | 주변 지지체계로부터 격리 |
+| | 자존감 공격 | 피해자의 자존감 약화 |
+| **위협 (5종)** | 신체 위협 | 폭력행사 암시 또는 명시적 위협 |
+| | 생명 위협 | 살해/상해 위협 |
+| | 법적 위협 | 고소/처벌 위협 |
+| | 경제적 위협 | 경제적 손실/파산 위협 |
+| | 관계 단절 위협 | 관계 파탄 위협 |
+| **강압 (3종)** | 명령형 발화 | 강제적 지시나 요구 |
+| | 선택지 제한 | 피해자의 선택권 박탈 |
+| | 긴급성 강조 | 즉각적 순종 강요 |
+| **기만 (5종)** | 허위 사실 | 거짓 정보 제공 |
+| | 약속 위반 | 약속을 어기고 정당화 |
+| | 정보 은폐 | 중요 정보 숨김 |
+| | 의도적 오해 | 모호한 표현으로 오해 유도 |
+| | 신뢰 남용 | 신뢰를 이용한 기만 |
+
+#### Speech Emotion Recognition (SER)
+
+딥러닝 기반 음성 감정 인식 서비스:
+
+| 모델 | 감정 범주 | 특징 |
+|------|----------|------|
+| wav2vec2-emotion | 7감정 (영어) | 기쁨, 슬픔, 분노, 공포, 혐오, 놀람, 중립 |
+| SpeechBrain SER | IEMOCAP 데이터 | 4감정 고정밀도 분류 |
+| 앙상블 모델 | 다모델 통합 | 투표 기반 신뢰도 향상 |
+
+#### 텍스트-음성 교차검증
+
+텍스트 감정과 음성 감정 간 불일치를 탐지합니다:
+
+| 불일치 유형 | 설명 | 탐지 기준 |
+|------------|------|----------|
+| 감정 불일치 | 텍스트와 음성 감정이 상충 | 신뢰도 차이 > 0.3 |
+| 강도 불일치 | 감정 강도 수준 차이 | 텍스트는 중립, 음성은 고강도 |
+| 위장 감정 | 평온한 톤으로 공격적 발언 | 감정-텍스트 매칭 점수 < 0.5 |
+| 기만 지표 | 거짓말 가능성 보조 지표 | 말속도 저하, 발화지연 증가 |
+
+#### 포렌식 종합 스코어링
+
+다차원 분석 결과를 종합하여 위험 등급을 산출합니다:
+
+| 위험 등급 | 포인트 범위 | 설명 |
+|----------|-----------|------|
+| **매우 높음** | 80-100 | 즉각적 위협, 법적 조치 권장 |
+| **높음** | 60-79 | 지속적 심리적 압박, 전문가 상담 필요 |
+| **중간** | 40-59 | 간헐적 부정적 패턴 |
+| **낮음** | 20-39 | 일반적 갈등 수준 |
+| **매우 낮음** | 0-19 | 정상적 대화 |
+
+### 사용 예시
+
+```python
+from voice_man.services.forensic.audio_feature_service import AudioFeatureService
+from voice_man.services.forensic.stress_analysis_service import StressAnalysisService
+from voice_man.services.forensic.crime_language_service import CrimeLanguageService
+from voice_man.services.forensic.ser_service import SERService
+from voice_man.services.forensic.cross_validation_service import CrossValidationService
+from voice_man.services.forensic.forensic_scoring_service import ForensicScoringService
+import librosa
+
+# 오디오 로드
+audio, sr = librosa.load("recording.wav", sr=16000)
+
+# Phase 1: 음성 특성 분석
+feature_service = AudioFeatureService()
+analysis = feature_service.analyze_audio_features(
+    audio=audio,
+    sr=sr,
+    file_path="recording.wav"
+)
+
+# 결과 확인
+print(f"음량 (RMS): {analysis.volume_features.rms_db:.1f} dB")
+print(f"피치 (F0): {analysis.pitch_features.f0_mean_hz:.1f} Hz")
+print(f"스트레스 지수: {analysis.stress_features.stress_index:.1f}")
+print(f"위험 수준: {analysis.stress_features.risk_level}")
+print(f"감정 격화 구간: {len(analysis.escalation_zones)}개 감지")
+
+# Phase 2: 고급 포렌식 분석
+# 범죄 언어 패턴 탐지
+crime_service = CrimeLanguageService()
+patterns = crime_service.detect_patterns("너 기억력이 나빠서 그렇지, 내가 그런 적 없어")
+print(f"가스라이팅 패턴: {patterns['detected_patterns']}")
+
+# Speech Emotion Recognition
+ser_service = SERService()
+emotion_result = ser_service.predict_emotion(audio, sr)
+print(f"예측 감정: {emotion_result.emotion} (신뢰도: {emotion_result.confidence:.2f})")
+
+# 텍스트-음성 교차검증
+cv_service = CrossValidationService()
+inconsistencies = cv_service.detect_inconsistencies(
+    text_emotion="neutral",
+    audio_emotion="anger",
+    confidence_diff=0.6
+)
+print(f"감정 불일치 탐지: {inconsistencies}")
+
+# 종합 포렌식 스코어링
+scoring_service = ForensicScoringService()
+forensic_score = scoring_service.calculate_forensic_score(
+    crime_language_score=0.85,
+    emotion_score=0.72,
+    stress_score=0.68,
+    cross_validation_score=0.45
+)
+print(f"포렌식 종합 점수: {forensic_score.total_score:.1f}/100")
+print(f"위험 등급: {forensic_score.risk_level}")
+print(f"증거 생성: {forensic_score.evidence_summary}")
+```
+
 ## 라이선스
 
 MIT License
@@ -335,6 +510,7 @@ MIT License
 - [SPEC-PARALLEL-001](.moai/specs/SPEC-PARALLEL-001/spec.md) - GPU 병렬처리 최적화
 - [SPEC-WHISPERX-001](.moai/specs/SPEC-WHISPERX-001/spec.md) - WhisperX 통합 파이프라인
 - [SPEC-E2ETEST-001](.moai/specs/SPEC-E2ETEST-001/spec.md) - E2E 통합 테스트 (GPU 병렬 배치 처리)
+- [SPEC-FORENSIC-001](.moai/specs/SPEC-FORENSIC-001/spec.md) - 범죄 프로파일링 기반 음성 포렌식 분석
 
 **버전**: 1.3.0
 **상태**: 완료
