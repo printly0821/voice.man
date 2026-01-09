@@ -25,28 +25,236 @@ Voice Man은 음성 녹취 파일을 텍스트로 변환하고, 법적 증거로
 
 ## 시스템 아키텍처
 
+### 전체 파이프라인 (4단계 포렌식 분석)
+
+Voice Man은 4단계 포렌식 분석 파이프라인을 통해 음성 녹취 파일을 법적 증거로 활용 가능한 형태로 변환합니다.
+
 ```mermaid
 flowchart TD
-    Upload[오디오 파일 업로드] --> Hash[SHA-256 해시 생성]
-    Hash --> Preprocess[FFmpeg 전처리]
-    Preprocess --> GPU{GPU 가용성 확인}
-    GPU -->|CUDA 사용| STT_GPU[faster-whisper GPU 변환]
-    GPU -->|CPU 폴백| STT_CPU[faster-whisper CPU 변환]
-    STT_GPU --> Diarization[pyannote-audio 화자 분리]
-    STT_CPU --> Diarization
-    Diarization --> Merge[STT + 화자 병합]
-    Merge --> Crime[범죄 발언 태깅]
-    Crime --> Psychology[심리 분석]
-    Psychology --> Report[PDF 보고서 생성]
+    subgraph Phase1[Phase 1: 기본 변환]
+        Upload[오디오 파일 업로드] --> Hash[SHA-256 해시 생성]
+        Hash --> Preprocess[FFmpeg 전처리]
+        Preprocess --> GPU{GPU 가용성 확인}
+        GPU -->|CUDA 사용| STT_GPU[WhisperX GPU 변환]
+        GPU -->|CPU 폴백| STT_CPU[WhisperX CPU 변환]
+        STT_GPU --> Diarization[화자 분리]
+        STT_CPU --> Diarization
+        Diarization --> Align[Word-level 정렬]
+    end
+
+    subgraph Phase2[Phase 2: 음성 포렌식 분석]
+        Align --> Volume[음량 분석]
+        Align --> Pitch[피치 분석]
+        Align --> Rate[말 속도 분석]
+        Volume --> Stress[스트레스 지표]
+        Pitch --> Stress
+        Rate --> Stress
+    end
+
+    subgraph Phase3[Phase 3: 고급 심리 분석]
+        Stress --> SER[Speech Emotion Recognition]
+        Align --> CrimeTag[범죄 언어 태깅]
+        CrimeTag --> Gaslight[가스라이팅 패턴]
+        Gaslight --> CrossVal[텍스트-음성 교차검증]
+        SER --> CrossVal
+        CrossVal --> Score[포렌식 스코어링]
+    end
+
+    subgraph Phase4[Phase 4: 보고서 생성]
+        Score --> HTML[HTML 보고서]
+        HTML --> PDF[PDF 변환]
+        Score --> Diagram[Mermaid 다이어그램]
+    end
 
     style Upload fill:#e1f5ff
     style GPU fill:#ffe4b5
     style STT_GPU fill:#90EE90
     style STT_CPU fill:#fff4e1
     style Diarization fill:#ffe1f5
-    style Crime fill:#f5e1ff
-    style Psychology fill:#e1ffe1
-    style Report fill:#ffe1e1
+    style Stress fill:#f5e1ff
+    style SER fill:#e1ffe1
+    style CrossVal fill:#ffe1e1
+    style Score fill:#ffcc99
+    style HTML fill:#ccccff
+    style PDF fill:#ffcccc
+    style Diagram fill:#ccffcc
+```
+
+### Phase별 상세 아키텍처
+
+#### Phase 1: 기본 변환 (STT + 화자 분리)
+
+```mermaid
+sequenceDiagram
+    participant Client as 클라이언트
+    participant API as FastAPI
+    participant WhisperX as WhisperX 파이프라인
+    participant GPU as GPU (CUDA)
+    participant DB as 데이터베이스
+
+    Client->>API: 오디오 파일 업로드
+    API->>API: SHA-256 해시 생성
+    API->>WhisperX: 변환 요청
+    WhisperX->>GPU: STT 모델 로드 (large-v3)
+    GPU-->>WhisperX: 텍스트 변환 완료
+    WhisperX->>GPU: 화자 분리 (pyannote)
+    GPU-->>WhisperX: 화자 라벨링 완료
+    WhisperX->>GPU: Word-level 정렬 (WAV2VEC2)
+    GPU-->>WhisperX: 타임스탬프 정렬 완료
+    WhisperX->>DB: 결과 저장
+    DB-->>Client: 변환 결과 반환
+```
+
+#### Phase 2: 음성 포렌식 분석
+
+```mermaid
+flowchart LR
+    subgraph Input[입력]
+        Audio[오디오 세그먼트]
+    end
+
+    subgraph Volume[음량 분석]
+        RMS[RMS amplitude]
+        Peak[Peak amplitude]
+        Dynamic[Dynamic range]
+    end
+
+    subgraph Pitch[피치 분석]
+        F0[F0 평균/편차]
+        Jitter[Jitter %]
+        Range[피치 범위]
+    end
+
+    subgraph Rate[말 속도 분석]
+        WPM[WPM 계산]
+        Speech[발화/무음 비율]
+        Pause[휴지 감지]
+    end
+
+    subgraph Stress[스트레스 분석]
+        Shimmer[Shimmer %]
+        HNR[HNR dB]
+        Formant[포먼트 안정성]
+        Index[스트레스 지수]
+    end
+
+    Audio --> Volume
+    Audio --> Pitch
+    Audio --> Rate
+    Volume --> Stress
+    Pitch --> Stress
+    Rate --> Stress
+    Stress --> Escalation[감정 격화 구간 감지]
+
+    style Audio fill:#e1f5ff
+    style Stress fill:#ffe1e1
+    style Escalation fill:#ffcccc
+    style Index fill:#ff9999
+```
+
+#### Phase 3: 고급 심리 분석
+
+```mermaid
+flowchart TB
+    subgraph SER[Speech Emotion Recognition]
+        Wav2Vec[Wav2Vec2 모델]
+        SpeechBrain[SpeechBrain SER]
+        Ensemble[앙상블]
+    end
+
+    subgraph Crime[범죄 언어 패턴 DB]
+        Gaslight[가스라이팅 7종]
+        Threat[위협 5종]
+        Coercion[강압 3종]
+        Deception[기만 5종]
+    end
+
+    subgraph Cross[교차검증]
+        TextEmotion[텍스트 감정]
+        VoiceEmotion[음성 감정]
+        Inconsistency[불일치 탐지]
+    end
+
+    subgraph Score[포렌식 스코어링]
+        CrimeScore[범죄 언어 점수]
+        EmotionScore[감정 점수]
+        StressScore[스트레스 점수]
+        CrossScore[교차검증 점수]
+        Final[종합 위험도]
+    end
+
+    SER --> Cross
+    Crime --> Score
+    Cross --> Score
+    Score --> Final
+
+    style Final fill:#ff6b6b
+    style Cross fill:#ffd93d
+    style Score fill:#6bcf7f
+```
+
+#### Phase 4: 보고서 생성
+
+```mermaid
+flowchart LR
+    subgraph Data[분석 데이터]
+        Forensic[포렌식 분석 결과]
+        Transcript[대화 기록]
+        Timeline[타임라인]
+    end
+
+    subgraph Report[보고서 생성]
+        HTMLGen[HTML 생성기]
+        MermaidGen[Mermaid 다이어그램]
+        PDFGen[PDF 변환]
+    end
+
+    subgraph Output[출력]
+        HTMLFile[HTML 보고서]
+        PDFFile[PDF 보고서]
+        Charts[시각화 차트]
+    end
+
+    Data --> HTMLGen
+    Data --> MermaidGen
+    HTMLGen --> HTMLFile
+    HTMLGen --> PDFGen
+    PDFGen --> PDFFile
+    MermaidGen --> Charts
+
+    style HTMLFile fill:#ccccff
+    style PDFFile fill:#ffcccc
+    style Charts fill:#ccffcc
+```
+
+### ARM64 GPU 가속 아키텍처
+
+```mermaid
+flowchart TB
+    subgraph ARM64[ARM64 환경]
+        GB10[GB10 Superchip]
+        CUDA[CUDA 12.1+]
+    end
+
+    subgraph Software[소프트웨어 스택]
+        PyTorch[PyTorch ARM64]
+        WhisperX[WhisperX 3.1.5+]
+        Pyannote[pyannote-audio 3.1+]
+    end
+
+    subgraph Services[분석 서비스]
+        GPUMonitor[GPU 모니터링]
+        BatchService[배치 처리]
+        MemoryService[메모리 관리]
+    end
+
+    ARM64 --> CUDA
+    CUDA --> Software
+    Software --> Services
+
+    style GB10 fill:#ff6b6b
+    style CUDA fill:#ffd93d
+    style Services fill:#6bcf7f
 ```
 
 ## 기술 스택
@@ -190,6 +398,486 @@ uvicorn voice_man.main:app --host 0.0.0.0 --port 8000 --workers 4
 | `/api/v1/audio/{id}/analysis/crime` | GET | 범죄 발언 태깅 결과 |
 | `/api/v1/audio/{id}/analysis/psychology` | GET | 심리 분석 결과 |
 | `/api/v1/audio/{id}/report` | POST/GET | 증거 보고서 생성/다운로드 |
+| `/api/v1/forensic/analyze/{audio_id}` | POST | 음성 특성 분석 시작 |
+| `/api/v1/forensic/features/{audio_id}` | GET | 음성 특성 결과 조회 |
+| `/api/v1/forensic/emotion/{audio_id}` | GET | SER 분석 결과 조회 |
+| `/api/v1/forensic/report` | POST | 종합 포렌식 리포트 생성 |
+
+## 서비스 적용 분야
+
+Voice Man은 다양한 산업 분야에서 음성 분석이 필요한 경우 활용할 수 있습니다.
+
+### 1. 정신 건강 및 상담 센터
+
+**적용 시나리오:**
+- 결혼/이혼 상담: 부부 간 갈등 원인 분석, 가스라이팅 패턴 식별
+- 가정 폭력 예방: 위협적 언어 패턴 조기 탐지, 위험도 평가
+- 심리 치료 보조: 환자의 감정 변화 추적, 치료 효과 모니터링
+
+**활용 기능:**
+- 가스라이팅 7종 패턴 탐지 (현실 부정, 전가, 축소, 혼란 유발, 의심 조장, 고립화, 자존감 공격)
+- 음성 스트레스 지수 분석 (Shimmer, HNR, 포먼트 안정성)
+- 감정 격화 구간 자동 탐지
+- 화자별 심리 프로파일 생성
+
+```python
+# 상담 센터 연동 예시
+from voice_man.services.forensic.forensic_scoring_service import ForensicScoringService
+
+# 부부 상담 녹음 분석
+scoring_service = ForensicScoringService()
+result = scoring_service.calculate_forensic_score(
+    crime_language_score=0.72,  # 가스라이팅 패턴 빈도
+    emotion_score=0.65,          # 부정 감정 비율
+    stress_score=0.58,           # 음성 스트레스 지수
+    cross_validation_score=0.42  # 텍스트-음성 불일치
+)
+
+# 위험도 평가
+if result.risk_level in ["매우 높음", "높음"]:
+    # 전문가 상담 연결 또는 안전 조치 권장
+    print(f"위험도: {result.risk_level}, 권장사항: {result.recommendations}")
+```
+
+### 2. 교육 기관 및 학교
+
+**적용 시나리오:**
+- 가스라이팅/괴롭힘 탐지: 학교 폭력, 교사-학생 간 괴롭힘 패턴 식별
+- 학교 폭력 예방: 위협적 발언 조기 경보 시스템
+- 교육 상황 모니터링: 교실 내 커뮤니케이션 품질 분석
+
+**활용 기능:**
+- 위협 5종 패턴 탐지 (신체/생명/법적/경제적/관계 단절 위협)
+- 강압 3종 패턴 탐지 (명령형 발화, 선택지 제한, 긴급성 강조)
+- 음량/피치 급격한 변화 감지 (감정 격화 구간)
+- 장기적 패턴 추적 (시계열 분석)
+
+```python
+# 학교 안전 시스템 연동 예시
+from voice_man.services.forensic.crime_language_service import CrimeLanguageService
+
+crime_service = CrimeLanguageService()
+
+# 학생 간 대화 또는 교사-학생 대화 분석
+threat_patterns = crime_service.detect_threats(
+    "너 오늘 집에 가면 큰일 날 줄 알아?",
+    speaker_id="SPEAKER_01"
+)
+
+if threat_patterns["high_risk"]:
+    # 학교 안전 부서 알림
+    alert_level = "CRITICAL" if threat_patterns["immediate_threat"] else "WARNING"
+    print(f"[{alert_level}] 위협 패턴 탐지: {threat_patterns['patterns']}")
+```
+
+### 3. 기업 교육 및 코칭
+
+**적용 시나리오:**
+- 커뮤니케이션 코칭: 직원 간 대화 분석, 개선점 도출
+- 리더십 개발: 관리자의 커뮤니케이션 스타일 진단
+- 갈등 중재: 부서 간 또는 팀 내 갈등 원인 분석
+
+**활용 기능:**
+- 화자별 발화 비율 분석 (지배적 발화 패턴)
+- 말 속도 및 휴지 패턴 분석 (말더듬, 망설임)
+- 음성-텍스트 감정 일관성 검증 (진정성 평가)
+- 대화 타임라인 시각화
+
+```python
+# 기업 코칭 플랫폼 연동 예시
+from voice_man.services.forensic.audio_feature_service import AudioFeatureService
+
+feature_service = AudioFeatureService()
+
+# 팀 미팅 녹음 분석
+analysis = feature_service.analyze_conversation_dynamics(
+    audio_segments=segments,
+    speakers=["SPEAKER_00", "SPEAKER_01"]
+)
+
+# 발화 밸런스 리포트
+speaker_00_ratio = analysis["speaker_ratios"]["SPEAKER_00"]
+speaker_01_ratio = analysis["speaker_ratios"]["SPEAKER_01"]
+
+print(f"발화 비율 - SPEAKER_00: {speaker_00_ratio:.1%}, SPEAKER_01: {speaker_01_ratio:.1%}")
+
+# 지배적 발화 패턴 경고
+if abs(speaker_00_ratio - speaker_01_ratio) > 0.7:
+    print("WARNING: 대화 균형이 심각하게 치우쳐 있습니다.")
+```
+
+### 4. 법률 및 수사 기관
+
+**적용 시나리오:**
+- 수사기관 지원: 협박, 공갈, 사기 녹취 분석
+- 법적 증거 분석: 법정 제출용 포렌식 보고서 생성
+- 진술 신빙성 평가: 텍스트-음성 불일치 탐지
+
+**활용 기능:**
+- 범죄 언어 20종 패턴 데이터베이스 (가스라이팅, 위협, 강압, 기만)
+- Speech Emotion Recognition (SER) 다모델 앙상블
+- 텍스트-음성 교차검증 (감정 불일치, 위장 감정 탐지)
+- 법적 증거 보고서 생성 (HTML/PDF, Mermaid 다이어그램)
+
+```python
+# 수사기관 연동 예시
+from voice_man.reports.html_generator import ForensicHTMLGenerator
+from voice_man.services.forensic.cross_validation_service import CrossValidationService
+
+# 포렌식 분석 실행
+cv_service = CrossValidationService()
+inconsistencies = cv_service.detect_inconsistencies(
+    text_emotion="neutral",
+    audio_emotion="anger",
+    confidence_diff=0.6
+)
+
+# 법정 제출용 보고서 생성
+generator = ForensicHTMLGenerator()
+html_report = generator.generate_from_json(
+    json_path="forensic_analysis.json",
+    output_path="evidence_report.html"
+)
+
+# 진술 신빙성 평가
+if inconsistencies["deception_indicators"] > 0.7:
+    print("고위험: 진술 신빙성 저하 지표 다수 탐지")
+    print(f"- 음성-텍스트 불일치: {inconsistencies['emotion_mismatch']}")
+    print(f"- 위장 감정 가능성: {inconsistencies['disguised_emotion']}")
+```
+
+### 산업별 적용 매트릭스
+
+| 산업 분야 | 주요 탐지 패턴 | 활용 분석 | 출력물 |
+|-----------|----------------|-----------|--------|
+| **정신 건강** | 가스라이팅, 위협 | 음성 스트레스, 감정 추이 | 심리 프로파일, 위험도 평가 |
+| **교육** | 위협, 강압, 괴롭힘 | 감정 격화 구간, 발화 밸런스 | 안전 경보, 개입 권고 |
+| **기업** | 강압, 기만 | 커뮤니케이션 스타일, 진정성 | 코칭 리포트, 개선안 |
+| **법률/수사** | 전체 패턴 | 포렌식 종합 분석, 교차검증 | 법적 증거 보고서 |
+
+## 통합 아키텍처 예시
+
+### 예시 1: 정신 건강 상담 플랫폼 통합
+
+```mermaid
+flowchart TB
+    subgraph Client[상담 클라이언트]
+        Web[Web App]
+        Mobile[Mobile App]
+    end
+
+    subgraph Gateway[API Gateway]
+        Auth[인증]
+        RateLimit[속도 제한]
+    end
+
+    subgraph VoiceMan[Voice Man 서비스]
+        Upload[오디오 업로드]
+        STT[STT 변환]
+        Forensic[포렌식 분석]
+        Report[보고서 생성]
+    end
+
+    subgraph Counseling[상담 시스템]
+        PatientDB[환자 DB]
+        Counselor[상담사 대시보드]
+        Alert[위험 경보]
+    end
+
+    Web --> Gateway
+    Mobile --> Gateway
+    Gateway --> Upload
+    Upload --> STT
+    STT --> Forensic
+    Forensic --> Report
+    Report --> Counselor
+    Forensic --> Alert
+    Alert --> Counselor
+
+    style Alert fill:#ff6b6b
+    style Forensic fill:#ffd93d
+```
+
+**API 통합 코드 예시:**
+
+```python
+# 상담 플랫폼 백엔드 통합
+from fastapi import FastAPI, BackgroundTasks
+from voice_man.services.whisperx_service import WhisperXService
+from voice_man.services.forensic.forensic_scoring_service import ForensicScoringService
+
+app = FastAPI()
+whisperx = WhisperXService()
+scoring = ForensicScoringService()
+
+@app.post("/api/counseling/session/{session_id}/analyze")
+async def analyze_counseling_session(
+    session_id: str,
+    audio_file: UploadFile,
+    background_tasks: BackgroundTasks
+):
+    # 1. 오디오 파일 저장
+    file_path = save_audio_file(audio_file, session_id)
+
+    # 2. 비동기 분석 요청
+    background_tasks.add_task(
+        run_forensic_analysis,
+        session_id=session_id,
+        audio_path=file_path
+    )
+
+    return {"status": "analyzing", "session_id": session_id}
+
+async def run_forensic_analysis(session_id: str, audio_path: str):
+    # STT 변환
+    transcription = await whisperx.transcribe(audio_path)
+
+    # 포렌식 분석
+    result = scoring.calculate_comprehensive_score(
+        transcription=transcription,
+        analysis_type="counseling"
+    )
+
+    # 위험 경보 발송
+    if result.risk_level in ["매우 높음", "높음"]:
+        send_alert_to_counselor(
+            session_id=session_id,
+            risk_level=result.risk_level,
+            recommendations=result.recommendations
+        )
+
+    # 결과 저장
+    save_analysis_result(session_id, result)
+```
+
+### 예시 2: 학교 안전 모니터링 시스템
+
+```mermaid
+flowchart LR
+    subgraph School[학교 시스템]
+        LMS[LMS]
+        Counseling[상담실]
+        Safety[안전부서]
+    end
+
+    subgraph VoiceMan[Voice Man 분석]
+        Realtime[실시간 분석]
+        Batch[배치 분석]
+        DB[패턴 DB]
+    end
+
+    subgraph Alert[경보 시스템]
+        Teacher[담임교사]
+        Parents[학부모]
+        Admin[행정실]
+    end
+
+    LMS --> Realtime
+    Counseling --> Batch
+    Realtime --> DB
+    Batch --> DB
+    DB --> Alert
+
+    Alert --> Teacher
+    Alert --> Parents
+    Alert --> Admin
+
+    style Alert fill:#ff6b6b
+    style Realtime fill:#ffd93d
+    style Batch fill:#6bcf7f
+```
+
+### 예시 3: 기업 커뮤니케이션 트레이닝
+
+```python
+# 기업 코칭 플랫폼 연동
+from voice_man.services.forensic.audio_feature_service import AudioFeatureService
+from voice_man.services.forensic.ser_service import SERService
+
+class CorporateCoachingService:
+    """기업 커뮤니케이션 코칭 서비스"""
+
+    def __init__(self):
+        self.audio_service = AudioFeatureService()
+        self.ser_service = SERService()
+
+    async def analyze_meeting_recording(
+        self,
+        audio_path: str,
+        participants: list[str]
+    ) -> dict:
+        """회의 녹음 분석"""
+
+        # 1. 음성 특성 분석
+        audio_features = self.audio_service.analyze_conversation_dynamics(
+            audio_path, participants
+        )
+
+        # 2. 감정 분석
+        emotion_results = await self.ser_service.batch_analyze(
+            audio_path, participants
+        )
+
+        # 3. 코칭 인사이트 생성
+        insights = self._generate_coaching_insights(
+            audio_features, emotion_results
+        )
+
+        return {
+            "conversation_balance": audio_features["speaker_ratios"],
+            "emotion_timeline": emotion_results["timeline"],
+            "improvement_areas": insights["areas"],
+            "recommendations": insights["recommendations"]
+        }
+
+    def _generate_coaching_insights(self, audio, emotion) -> dict:
+        """코칭 인사이트 생성"""
+        areas = []
+        recommendations = []
+
+        # 발화 밸런스 분석
+        ratios = audio["speaker_ratios"]
+        max_ratio = max(ratios.values())
+        if max_ratio > 0.7:
+            dominant = max(ratios, key=ratios.get)
+            areas.append(f"{dominant}의 지배적 발화 (비율: {max_ratio:.1%})")
+            recommendations.append("균형 있는 대화를 위한 발문 기회 분배 권장")
+
+        # 감정 분석
+        negative_ratio = emotion["negative_emotion_ratio"]
+        if negative_ratio > 0.4:
+            areas.append(f"부정 감정 비율 높음 ({negative_ratio:.1%})")
+            recommendations.append("감정 조절 훈련 및 비폭력 커뮤니케이션 교육")
+
+        return {"areas": areas, "recommendations": recommendations}
+```
+
+## 대화 훈련 서비스 확장
+
+Voice Man의 분석 결과는 대화 훈련 및 커뮤니케이션 스킬 개선에 활용할 수 있습니다.
+
+### 피드백 루프 구조
+
+```mermaid
+flowchart LR
+    subgraph Analysis[분석 단계]
+        Record[녹음 수집]
+        Analyze[포렌식 분석]
+        Score[스코어링]
+    end
+
+    subgraph Feedback[피드백 단계]
+        Report[상세 리포트]
+        Highlight[개선점 하이라이트]
+        Benchmark[벤치마크 비교]
+    end
+
+    subgraph Training[훈련 단계]
+        Practice[목표 설정 연습]
+        Roleplay[롤플레이 시뮬레이션]
+        Progress[진척도 추적]
+    end
+
+    subgraph Improvement[개선 단계]
+        Retest[재분석]
+        Compare[전후 비교]
+        Validate[개선 효과 검증]
+    end
+
+    Record --> Analyze
+    Analyze --> Score
+    Score --> Report
+    Report --> Highlight
+    Highlight --> Benchmark
+    Benchmark --> Practice
+    Practice --> Roleplay
+    Roleplay --> Progress
+    Progress --> Retest
+    Retest --> Compare
+    Compare --> Validate
+    Validate --> Practice
+
+    style Score fill:#ffd93d
+    style Practice fill:#6bcf7f
+    style Validate fill:#ff6b6b
+```
+
+### 훈련 서비스 API 예시
+
+```python
+from voice_man.services.training.coaching_service import CoachingService
+
+class ConversationTrainingService:
+    """대화 훈련 서비스"""
+
+    def __init__(self):
+        self.coaching = CoachingService()
+
+    async def create_training_plan(
+        self,
+        user_id: str,
+        baseline_recording: str
+    ) -> dict:
+        """개인별 훈련 계획 생성"""
+
+        # 1. 기준선 분석
+        baseline = await self.coaching.analyze_recording(baseline_recording)
+
+        # 2. 약점 식별
+        weaknesses = self._identify_weaknesses(baseline)
+
+        # 3. 훈련 목표 설정
+        goals = self._set_training_goals(weaknesses)
+
+        # 4. 훈련 프로그램 생성
+        program = self._generate_program(goals)
+
+        return {
+            "user_id": user_id,
+            "baseline_score": baseline["overall_score"],
+            "weaknesses": weaknesses,
+            "training_goals": goals,
+            "program": program
+        }
+
+    async def evaluate_practice_session(
+        self,
+        user_id: str,
+        practice_recording: str,
+        training_goal: str
+    ) -> dict:
+        """연습 세션 평가"""
+
+        # 1. 연습 녹음 분석
+        practice_result = await self.coaching.analyze_recording(practice_recording)
+
+        # 2. 기준선과 비교
+        comparison = await self._compare_with_baseline(user_id, practice_result)
+
+        # 3. 훈련 목표 달성도 평가
+        goal_achievement = self._evaluate_goal_achievement(
+            training_goal, practice_result
+        )
+
+        # 4. 다음 단계 권장
+        next_steps = self._recommend_next_steps(goal_achievement)
+
+        return {
+            "practice_score": practice_result["overall_score"],
+            "improvement": comparison["improvement"],
+            "goal_achievement": goal_achievement,
+            "next_steps": next_steps
+        }
+```
+
+### 훈련 시나리오별 가이드
+
+| 훈련 목표 | 분석 지표 | 개선 활동 | 성공 기준 |
+|-----------|-----------|-----------|-----------|
+| **비폭력 대화** | 위협/강압 패턴, 음량 급증 | "나" 전달법 연습, 휴지 활용 | 위협 패턴 0회, 음량 안정 |
+| **경청 능력** | 발화 비율, 인터럽트 횟수 | 3초 대기법, 요약 질문 | 발화 비율 40-60% |
+| **감정 표현** | 텍스트-음성 감정 일치, 감정 어휘 | 감정 어휘 확장, 진정성 발화 | 일관성 0.8 이상 |
+| **스트레스 관리** | 스트레스 지수, 말 속도 | 호흡 운동, 발화 속도 조절 | 스트레스 지수 40 미만 |
 
 ## 테스트
 
@@ -266,6 +954,13 @@ voice.man/
 │               ├── ser_service.py                  # Speech Emotion Recognition
 │               ├── cross_validation_service.py     # 텍스트-음성 교차검증
 │               └── forensic_scoring_service.py    # 포렌식 스코어링 서비스
+│       ├── report_service.py          # 보고서 서비스
+│       ├── comprehensive_report_service.py  # 종합 보고서 서비스
+│       └── chart_service.py           # 차트 생성 서비스
+│   └── reports/
+│       ├── __init__.py
+│       ├── html_generator.py          # HTML 보고서 생성 (Mermaid 포함)
+│       └── pdf_generator.py           # PDF 변환 (Playwright)
 ├── tests/
 │   ├── unit/                       # 단위 테스트
 │   ├── integration/                # 통합 테스트
@@ -280,7 +975,8 @@ voice.man/
 │   └── test_parallel_processing.py # GPU 병렬 처리 테스트
 ├── scripts/
 │   ├── process_audio_files.py      # 배치 오디오 처리 스크립트
-│   └── e2e_batch_test.py           # E2E 배치 테스트 스크립트
+│   ├── e2e_batch_test.py           # E2E 배치 테스트 스크립트
+│   └── generate_forensic_report.py # 포렌식 보고서 생성 스크립트
 ├── docs/                           # 문서
 ├── data/
 │   ├── uploads/                    # 업로드된 오디오 파일
