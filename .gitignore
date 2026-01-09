@@ -274,3 +274,19 @@ docs/questions/
 docs/sections/
 docs/setup-glm.py
 docs/statusline-config.yaml
+
+# ---------------------------------------------
+# Pre-trained models and checkpoints (large files)
+# ---------------------------------------------
+pretrained_models/
+wav2vec2_checkpoints/
+huggingface_cache/
+
+# Generated forensic reports
+ref/call/results/
+*.forensic.json
+
+# Test outputs
+test_results.txt
+test_*.py
+!test_forensic_*.py  # Keep test scripts
