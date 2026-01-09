@@ -1,0 +1,140 @@
+{
+  "version": "1.0.0",
+  "description": "협박 언어 패턴 데이터베이스 (한국어)",
+  "source": "Korean Criminal Law Research 2024, Speech Acts analysis 2025",
+  "last_updated": "2026-01-09",
+  "patterns": [
+    {
+      "type": "direct",
+      "type_ko": "직접적협박",
+      "description_ko": "명시적으로 신체적/정신적 해를 가하겠다고 위협하는 패턴",
+      "description_en": "Pattern of explicitly threatening physical or mental harm",
+      "severity_weight": 1.0,
+      "patterns_ko": [
+        "죽여버릴 거야",
+        "때려 죽일 거야",
+        "가만 안 둬",
+        "두고 봐",
+        "후회하게 해줄게",
+        "다 끝났어",
+        "네가 어떻게 되는지 봐",
+        "넌 끝이야",
+        "죽을 줄 알아",
+        "혼내줄 거야",
+        "벌 받을 거야",
+        "그러면 알아",
+        "어떻게 되는지 보자"
+      ],
+      "patterns_en": [
+        "I'll kill you",
+        "You're dead",
+        "I won't let you get away with this",
+        "You'll regret this",
+        "Watch what happens"
+      ]
+    },
+    {
+      "type": "conditional",
+      "type_ko": "조건부협박",
+      "description_ko": "특정 조건이 충족되지 않으면 해를 가하겠다고 위협하는 패턴",
+      "description_en": "Pattern of threatening harm if certain conditions are not met",
+      "severity_weight": 0.9,
+      "patterns_ko": [
+        "만약 ~하면",
+        "그러지 않으면",
+        "다시 한번 ~하면",
+        "한 번만 더 그러면",
+        "계속 그러면",
+        "또 그러면",
+        "그렇게 하면",
+        "안 그러면",
+        "말 안 들으면",
+        "다음에도 그러면"
+      ],
+      "patterns_en": [
+        "If you do that",
+        "Unless you",
+        "If you ever again",
+        "One more time and",
+        "Keep doing that and"
+      ]
+    },
+    {
+      "type": "veiled",
+      "type_ko": "암시적협박",
+      "description_ko": "직접적이지 않지만 암시적으로 위협하는 패턴",
+      "description_en": "Pattern of implicitly threatening without explicit statements",
+      "severity_weight": 0.7,
+      "patterns_ko": [
+        "알지?",
+        "알겠지?",
+        "무슨 말인지 알지?",
+        "내 말 무슨 뜻인지 알지?",
+        "네가 잘 알잖아",
+        "말 안 해도 알잖아",
+        "어떻게 될지 알지?",
+        "결과는 뻔하지",
+        "내가 어떤 사람인지 알잖아",
+        "어떻게 되는지 알잖아"
+      ],
+      "patterns_en": [
+        "You know what I mean",
+        "You understand, right?",
+        "I don't need to spell it out",
+        "You know how this ends"
+      ]
+    },
+    {
+      "type": "economic",
+      "type_ko": "경제적협박",
+      "description_ko": "경제적/재정적 피해를 가하겠다고 위협하는 패턴",
+      "description_en": "Pattern of threatening economic or financial harm",
+      "severity_weight": 0.8,
+      "patterns_ko": [
+        "돈 한 푼 못 받아",
+        "다 빼앗을 거야",
+        "한 푼도 안 줘",
+        "회사에서 잘릴 거야",
+        "일 못하게 할 거야",
+        "거래처 다 끊어버릴 거야",
+        "파산시켜 버릴 거야",
+        "빚더미에 앉을 거야",
+        "아무것도 안 남을 거야",
+        "경제적으로 망하게 해줄게"
+      ],
+      "patterns_en": [
+        "You won't get a penny",
+        "I'll take everything",
+        "I'll make sure you lose your job",
+        "I'll bankrupt you",
+        "You'll have nothing left"
+      ]
+    },
+    {
+      "type": "social",
+      "type_ko": "사회적협박",
+      "description_ko": "사회적 평판이나 관계를 손상시키겠다고 위협하는 패턴",
+      "description_en": "Pattern of threatening to damage social reputation or relationships",
+      "severity_weight": 0.75,
+      "patterns_ko": [
+        "다 소문낼 거야",
+        "다 알게 될 거야",
+        "네 비밀 다 폭로할 거야",
+        "가족한테 다 말할 거야",
+        "직장에 다 알릴 거야",
+        "인터넷에 다 퍼뜨릴 거야",
+        "모든 사람이 알게 될 거야",
+        "사회생활 못하게 해줄게",
+        "평판 다 망쳐줄게",
+        "얼굴 못 들게 해줄게"
+      ],
+      "patterns_en": [
+        "I'll tell everyone",
+        "Everyone will know",
+        "I'll expose your secret",
+        "I'll tell your family",
+        "I'll ruin your reputation"
+      ]
+    }
+  ]
+}

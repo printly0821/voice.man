@@ -240,17 +240,27 @@ class WhisperXPipeline:
         )
 
     def _load_diarize_pipeline(self) -> None:
-        """Load diarization pipeline."""
+        """Load diarization pipeline using pyannote.audio directly."""
         if self._diarize_pipeline is not None:
             return
 
-        wx = _import_whisperx()
-
         logger.info("Loading diarization pipeline")
-        self._diarize_pipeline = wx.DiarizationPipeline(
-            use_auth_token=self._hf_token,
-            device=self.device,
-        )
+        try:
+            from pyannote.audio import Pipeline
+
+            self._diarize_pipeline = Pipeline.from_pretrained(
+                "pyannote/speaker-diarization-3.1",
+                use_auth_token=self._hf_token,
+            )
+            # Move to device
+            import torch
+
+            if self.device == "cuda" and torch.cuda.is_available():
+                self._diarize_pipeline.to(torch.device("cuda"))
+            logger.info(f"Diarization pipeline loaded on {self.device}")
+        except Exception as e:
+            logger.error(f"Failed to load diarization pipeline: {e}")
+            raise
 
     def _get_audio_duration(self, audio_path: str) -> float:
         """
@@ -385,13 +395,16 @@ class WhisperXPipeline:
         E4: Auto speaker count detection or manual specification.
 
         Args:
-            audio: Loaded audio data
+            audio: Loaded audio data (numpy array or dict with waveform/sample_rate)
             segments: Aligned segments
             num_speakers: Number of speakers (None for auto-detection)
 
         Returns:
             Dictionary with speaker-assigned segments
         """
+        import torch
+        import pandas as pd
+
         wx = _import_whisperx()
 
         # Load diarization pipeline if needed
@@ -399,11 +412,37 @@ class WhisperXPipeline:
 
         logger.info(f"Performing speaker diarization (num_speakers={num_speakers or 'auto'})")
 
-        # Run diarization
-        diarize_segments = self._diarize_pipeline(
-            audio,
-            min_speakers=self.config.min_speakers if num_speakers is None else num_speakers,
-            max_speakers=self.config.max_speakers if num_speakers is None else num_speakers,
+        # Prepare audio for pyannote (expects dict with waveform tensor and sample_rate)
+        if isinstance(audio, dict) and "waveform" in audio:
+            audio_input = audio
+        else:
+            # Convert numpy array to pyannote format
+            import numpy as np
+
+            if isinstance(audio, np.ndarray):
+                waveform = torch.from_numpy(audio).unsqueeze(0)  # Add channel dimension
+                if waveform.dtype != torch.float32:
+                    waveform = waveform.float()
+                audio_input = {"waveform": waveform, "sample_rate": 16000}
+            else:
+                audio_input = audio
+
+        # Run pyannote diarization
+        min_spk = self.config.min_speakers if num_speakers is None else num_speakers
+        max_spk = self.config.max_speakers if num_speakers is None else num_speakers
+
+        diarization = self._diarize_pipeline(
+            audio_input,
+            min_speakers=min_spk,
+            max_speakers=max_spk,
+        )
+
+        # Convert pyannote Annotation to DataFrame format expected by whisperx
+        diarize_segments = pd.DataFrame(
+            [
+                {"start": turn.start, "end": turn.end, "speaker": speaker}
+                for turn, _, speaker in diarization.itertracks(yield_label=True)
+            ]
         )
 
         # Assign speakers to segments
