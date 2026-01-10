@@ -12,8 +12,10 @@ SPEC-E2ETEST-001 Requirements Implemented:
 - N1: GPU memory must not exceed 95%
 - N3: Original file modification prohibited
 
-SPEC-PERFOPT-001 Performance Optimizations:
+SPEC-PERFOPT-001 Phase 2 Performance Optimizations:
 - Per-batch GPU cache cleanup via _cleanup_after_batch()
+- ForensicMemoryManager integration for stage-based memory allocation
+- ThermalManager integration for temperature monitoring and throttling
 """
 
 import asyncio
@@ -191,6 +193,9 @@ class E2ETestRunner:
 
     Implements SPEC-E2ETEST-001 requirements for GPU parallel batch processing
     with progress tracking, error handling, and comprehensive reporting.
+
+    SPEC-PERFOPT-001 Phase 2: Integrates ForensicMemoryManager and ThermalManager
+    for optimized GPU resource management during batch processing.
     """
 
     def __init__(
@@ -199,6 +204,8 @@ class E2ETestRunner:
         whisperx_service: Optional[Any] = None,
         gpu_monitor: Optional[Any] = None,
         memory_manager: Optional[Any] = None,
+        forensic_memory_manager: Optional[Any] = None,
+        thermal_manager: Optional[Any] = None,
     ):
         """Initialize E2E test runner.
 
@@ -207,14 +214,87 @@ class E2ETestRunner:
             whisperx_service: WhisperX service instance (optional, created if None)
             gpu_monitor: GPU monitor service instance (optional)
             memory_manager: Memory manager instance (optional)
+            forensic_memory_manager: ForensicMemoryManager for stage-based allocation (optional)
+            thermal_manager: ThermalManager for temperature monitoring (optional)
         """
         self.config = config
         self._whisperx_service = whisperx_service
         self._gpu_monitor = gpu_monitor
         self._memory_manager = memory_manager
+        self._forensic_memory_manager = forensic_memory_manager
+        self._thermal_manager = thermal_manager
         self._current_batch_size = config.batch_size
         self._original_checksums: Dict[str, str] = {}
         self._progress_callback: Optional[Callable] = None
+        self._is_throttling = False
+
+        # Register throttling callback if thermal manager provided
+        if self._thermal_manager:
+            self._thermal_manager.register_throttle_callback(self._on_thermal_throttle)
+
+    def _on_thermal_throttle(self, is_throttling: bool) -> None:
+        """
+        Callback for thermal throttling events.
+
+        SPEC-PERFOPT-001 Phase 2: Reduces batch size when thermal throttling active.
+
+        Args:
+            is_throttling: True if throttling started, False if stopped.
+        """
+        self._is_throttling = is_throttling
+        if is_throttling:
+            # Reduce batch size by 50% during thermal throttling
+            new_size = max(self._current_batch_size // 2, self.config.min_batch_size)
+            if new_size != self._current_batch_size:
+                logger.warning(
+                    f"Thermal throttling active, reducing batch size: "
+                    f"{self._current_batch_size} -> {new_size}"
+                )
+                self._current_batch_size = new_size
+        else:
+            logger.info("Thermal throttling stopped, batch size may recover")
+
+    def _allocate_stage_memory(self, stage: str) -> bool:
+        """
+        Allocate memory for a processing stage.
+
+        SPEC-PERFOPT-001 Phase 2: Uses ForensicMemoryManager for stage allocation.
+
+        Args:
+            stage: Stage name (stt, alignment, diarization, ser, scoring)
+
+        Returns:
+            True if allocation successful, False otherwise.
+        """
+        if self._forensic_memory_manager is None:
+            return True  # No manager, skip allocation
+
+        try:
+            return self._forensic_memory_manager.allocate(stage)
+        except Exception as e:
+            logger.warning(f"Failed to allocate memory for stage '{stage}': {e}")
+            return False
+
+    def _release_stage_memory(self, stage: str) -> bool:
+        """
+        Release memory for a processing stage.
+
+        SPEC-PERFOPT-001 Phase 2: Uses ForensicMemoryManager for stage release.
+
+        Args:
+            stage: Stage name to release.
+
+        Returns:
+            True if release successful, False otherwise.
+        """
+        if self._forensic_memory_manager is None:
+            return True  # No manager, skip release
+
+        try:
+            return self._forensic_memory_manager.release(stage)
+        except Exception as e:
+            logger.warning(f"Failed to release memory for stage '{stage}': {e}")
+            return False
 
     async def collect_files(self, directory: Path) -> List[Path]:
         """Collect audio files from directory.
@@ -416,6 +496,7 @@ class E2ETestRunner:
         Implements:
             U1: BatchProcessor based GPU parallel batch processing
             U4: Original file integrity verification
+            SPEC-PERFOPT-001 Phase 2: Memory allocation and thermal management
         """
         if not files:
             return E2ETestResult(
@@ -431,6 +512,14 @@ class E2ETestRunner:
 
         self._progress_callback = progress_callback
         start_time = time.time()
+
+        # SPEC-PERFOPT-001 Phase 2: Start thermal monitoring
+        if self._thermal_manager:
+            self._thermal_manager.start_monitoring(interval_seconds=1.0)
+            logger.info("Thermal monitoring started for E2E test run")
+
+        # SPEC-PERFOPT-001 Phase 2: Allocate STT stage memory
+        self._allocate_stage_memory("stt")
 
         # U4: Calculate original checksums
         if self.config.enable_checksum_verification:
@@ -501,6 +590,14 @@ class E2ETestRunner:
 
         total_time = time.time() - start_time
 
+        # SPEC-PERFOPT-001 Phase 2: Release STT stage memory
+        self._release_stage_memory("stt")
+
+        # SPEC-PERFOPT-001 Phase 2: Stop thermal monitoring
+        if self._thermal_manager:
+            self._thermal_manager.stop_monitoring()
+            logger.info("Thermal monitoring stopped after E2E test run")
+
         # U4: Verify checksums after processing
         checksum_verified = True
         if self.config.enable_checksum_verification:
@@ -511,6 +608,14 @@ class E2ETestRunner:
         gpu_stats = {}
         if self._gpu_monitor:
             gpu_stats = self._gpu_monitor.get_gpu_memory_stats()
+
+        # Add thermal stats if available
+        if self._thermal_manager:
+            gpu_stats["thermal"] = self._thermal_manager.get_thermal_stats()
+
+        # Add memory manager stats if available
+        if self._forensic_memory_manager:
+            gpu_stats["memory_allocation"] = self._forensic_memory_manager.get_memory_stats()
 
         return E2ETestResult(
             total_files=len(files),

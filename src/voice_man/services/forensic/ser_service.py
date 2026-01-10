@@ -10,6 +10,7 @@ Performance Optimizations:
 - Class-level model caching to persist models across analyze() calls
 - GPU-first device detection for optimal performance
 - Async preload_models() for proactive model loading
+- SPEC-PERFOPT-001 Phase 2: ForensicMemoryManager integration for memory allocation
 """
 
 import gc
@@ -70,16 +71,23 @@ class SERService:
     # Models persist across SERService instances within the same session
     _model_cache: Dict[str, Any] = {}
 
-    def __init__(self, device: str = "auto", use_ensemble: bool = True):
+    def __init__(
+        self,
+        device: str = "auto",
+        use_ensemble: bool = True,
+        memory_manager: Optional[Any] = None,
+    ):
         """
         Initialize the SER service.
 
         Args:
             device: Device to use ('auto', 'cpu', 'cuda'). 'auto' will detect automatically.
             use_ensemble: Whether to use both models for ensemble analysis.
+            memory_manager: Optional ForensicMemoryManager for memory allocation.
         """
         self.device = device
         self.use_ensemble = use_ensemble
+        self._memory_manager = memory_manager
 
         # Lazy-loaded models
         self._primary_model = None
@@ -616,9 +624,44 @@ class SERService:
             confidence=float(np.clip(result["confidence"], 0.0, 1.0)),
         )
 
+    def _allocate_ser_memory(self) -> bool:
+        """
+        SPEC-PERFOPT-001 Phase 2: Allocate memory for SER stage.
+
+        Returns:
+            True if allocation successful or no manager, False otherwise.
+        """
+        if self._memory_manager is None:
+            return True
+
+        try:
+            return self._memory_manager.allocate("ser")
+        except Exception as e:
+            logger.warning(f"Failed to allocate SER memory: {e}")
+            return False
+
+    def _release_ser_memory(self) -> bool:
+        """
+        SPEC-PERFOPT-001 Phase 2: Release memory for SER stage.
+
+        Returns:
+            True if release successful or no manager, False otherwise.
+        """
+        if self._memory_manager is None:
+            return True
+
+        try:
+            return self._memory_manager.release("ser")
+        except Exception as e:
+            logger.warning(f"Failed to release SER memory: {e}")
+            return False
+
     def analyze_ensemble(self, audio: np.ndarray, sr: int) -> MultiModelEmotionResult:
         """
         Perform ensemble analysis using both models.
+
+        SPEC-PERFOPT-001 Phase 2: Integrates with ForensicMemoryManager for
+        memory allocation before analysis and release after completion.
 
         Args:
             audio: Audio signal as numpy array
@@ -630,6 +673,9 @@ class SERService:
         self._validate_audio(audio, sr)
         audio_processed, sr_new = self._preprocess_audio(audio, sr)
 
+        # SPEC-PERFOPT-001 Phase 2: Allocate SER memory before analysis
+        self._allocate_ser_memory()
+
         # Calculate duration
         duration = len(audio_processed) / sr_new
 
@@ -637,75 +683,79 @@ class SERService:
         secondary_result = None
         ensemble_confidence = 0.0
 
-        # Run primary model
         try:
-            self._load_primary_model()
-            start_time = time.time()
-            primary_inference = self._run_primary_inference(audio_processed, sr_new)
-            primary_time = (time.time() - start_time) * 1000
-
-            primary_result = EmotionAnalysisResult(
-                dimensions=EmotionDimensions(
-                    arousal=float(np.clip(primary_inference["arousal"], 0.0, 1.0)),
-                    dominance=float(np.clip(primary_inference["dominance"], 0.0, 1.0)),
-                    valence=float(np.clip(primary_inference["valence"], 0.0, 1.0)),
-                ),
-                model_used=self.PRIMARY_MODEL_NAME,
-                processing_time_ms=primary_time,
-            )
-            ensemble_confidence += 0.5
-        except Exception:
-            pass
-
-        # Run secondary model if ensemble enabled
-        if self.use_ensemble:
+            # Run primary model
             try:
-                self._load_secondary_model()
+                self._load_primary_model()
                 start_time = time.time()
-                secondary_inference = self._run_secondary_inference(audio_processed, sr_new)
-                secondary_time = (time.time() - start_time) * 1000
+                primary_inference = self._run_primary_inference(audio_processed, sr_new)
+                primary_time = (time.time() - start_time) * 1000
 
-                # Build probabilities if available
-                probs = secondary_inference.get("probabilities", {})
-                probabilities = None
-                if probs:
-                    probabilities = EmotionProbabilities(
-                        angry=probs.get("angry", 0.0),
-                        happy=probs.get("happy", 0.0),
-                        sad=probs.get("sad", 0.0),
-                        neutral=probs.get("neutral", 0.0),
-                    )
-
-                secondary_result = EmotionAnalysisResult(
-                    categorical=CategoricalEmotion(
-                        emotion_type=secondary_inference["emotion"],
-                        confidence=float(np.clip(secondary_inference["confidence"], 0.0, 1.0)),
+                primary_result = EmotionAnalysisResult(
+                    dimensions=EmotionDimensions(
+                        arousal=float(np.clip(primary_inference["arousal"], 0.0, 1.0)),
+                        dominance=float(np.clip(primary_inference["dominance"], 0.0, 1.0)),
+                        valence=float(np.clip(primary_inference["valence"], 0.0, 1.0)),
                     ),
-                    probabilities=probabilities,
-                    model_used=self.SECONDARY_MODEL_NAME,
-                    processing_time_ms=secondary_time,
+                    model_used=self.PRIMARY_MODEL_NAME,
+                    processing_time_ms=primary_time,
                 )
-                ensemble_confidence += 0.5 * secondary_inference["confidence"]
+                ensemble_confidence += 0.5
             except Exception:
                 pass
 
-        # Ensure at least one result
-        if primary_result is None and secondary_result is None:
-            raise RuntimeError("Both models failed to produce results")
+            # Run secondary model if ensemble enabled
+            if self.use_ensemble:
+                try:
+                    self._load_secondary_model()
+                    start_time = time.time()
+                    secondary_inference = self._run_secondary_inference(audio_processed, sr_new)
+                    secondary_time = (time.time() - start_time) * 1000
 
-        # Calculate ensemble emotion if both available
-        ensemble_emotion = None
-        if secondary_result and secondary_result.categorical:
-            ensemble_emotion = secondary_result.categorical
+                    # Build probabilities if available
+                    probs = secondary_inference.get("probabilities", {})
+                    probabilities = None
+                    if probs:
+                        probabilities = EmotionProbabilities(
+                            angry=probs.get("angry", 0.0),
+                            happy=probs.get("happy", 0.0),
+                            sad=probs.get("sad", 0.0),
+                            neutral=probs.get("neutral", 0.0),
+                        )
 
-        return MultiModelEmotionResult(
-            primary_result=primary_result,
-            secondary_result=secondary_result,
-            ensemble_emotion=ensemble_emotion,
-            ensemble_confidence=float(np.clip(ensemble_confidence, 0.0, 1.0)),
-            confidence_weighted=True,
-            audio_duration_seconds=duration,
-        )
+                    secondary_result = EmotionAnalysisResult(
+                        categorical=CategoricalEmotion(
+                            emotion_type=secondary_inference["emotion"],
+                            confidence=float(np.clip(secondary_inference["confidence"], 0.0, 1.0)),
+                        ),
+                        probabilities=probabilities,
+                        model_used=self.SECONDARY_MODEL_NAME,
+                        processing_time_ms=secondary_time,
+                    )
+                    ensemble_confidence += 0.5 * secondary_inference["confidence"]
+                except Exception:
+                    pass
+
+            # Ensure at least one result
+            if primary_result is None and secondary_result is None:
+                raise RuntimeError("Both models failed to produce results")
+
+            # Calculate ensemble emotion if both available
+            ensemble_emotion = None
+            if secondary_result and secondary_result.categorical:
+                ensemble_emotion = secondary_result.categorical
+
+            return MultiModelEmotionResult(
+                primary_result=primary_result,
+                secondary_result=secondary_result,
+                ensemble_emotion=ensemble_emotion,
+                ensemble_confidence=float(np.clip(ensemble_confidence, 0.0, 1.0)),
+                confidence_weighted=True,
+                audio_duration_seconds=duration,
+            )
+        finally:
+            # SPEC-PERFOPT-001 Phase 2: Release SER memory after analysis
+            self._release_ser_memory()
 
     def analyze_ensemble_from_file(self, audio_path: str) -> MultiModelEmotionResult:
         """
