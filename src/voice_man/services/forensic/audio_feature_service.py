@@ -499,6 +499,40 @@ class AudioFeatureService:
 
         return pauses
 
+    def _calculate_rms_batch(
+        self, audio: np.ndarray, sr: int, window_samples: int, hop_samples: int
+    ) -> np.ndarray:
+        """
+        Calculate RMS values for multiple windows efficiently using vectorized operations.
+
+        Args:
+            audio: Full audio signal
+            sr: Sample rate
+            window_samples: Number of samples per window
+            hop_samples: Number of samples between windows
+
+        Returns:
+            Array of RMS values in dB for each window
+        """
+        # Calculate number of windows
+        num_windows = (len(audio) - window_samples) // hop_samples + 1
+
+        if num_windows <= 0:
+            return np.array([])
+
+        # Use stride tricks for efficient windowing (no copy)
+        shape = (num_windows, window_samples)
+        strides = (hop_samples * audio.strides[0], audio.strides[0])
+        windows_view = np.lib.stride_tricks.as_strided(audio, shape=shape, strides=strides)
+
+        # Calculate RMS for all windows at once (vectorized)
+        rms_values = np.sqrt(np.mean(windows_view**2, axis=1))
+
+        # Convert to dB
+        rms_db = 20 * np.log10(rms_values + 1e-10)
+
+        return rms_db
+
     def _extract_pitch_batch(self, windows: List[np.ndarray], sr: int) -> List[float]:
         """
         Extract mean pitch values from multiple audio windows.
@@ -561,27 +595,27 @@ class AudioFeatureService:
         window_samples = int(window_duration * sr)
         hop_samples = window_samples // 2
 
-        # Collect all windows for batch processing
-        windows = []
-        times = []
-        rms_values = []
+        # Calculate number of windows and times using vectorized operations
+        num_windows = (len(audio) - window_samples) // hop_samples + 1
 
-        for start in range(0, len(audio) - window_samples, hop_samples):
-            end = start + window_samples
-            window = audio[start:end]
-            windows.append(window)
-            times.append(start / sr)
-
-            # RMS for this window (can't be batched easily)
-            rms, rms_db = self.calculate_rms_amplitude(window, sr)
-            rms_values.append(rms_db)
-
-        if len(windows) < 2:
+        if num_windows < 2:
             return []
 
-        # Convert to numpy arrays
-        rms_values = np.array(rms_values)
-        times = np.array(times)
+        # Generate times array (vectorized)
+        times = np.arange(num_windows) * hop_samples / sr
+
+        # Batch RMS calculation using stride tricks (vectorized, no loop)
+        rms_values = self._calculate_rms_batch(audio, sr, window_samples, hop_samples)
+
+        if len(rms_values) < 2:
+            return []
+
+        # Collect windows for F0 batch extraction
+        windows = []
+        for i in range(num_windows):
+            start = i * hop_samples
+            end = start + window_samples
+            windows.append(audio[start:end])
 
         # Batch F0 extraction using GPU if available
         pitch_values = self._extract_pitch_batch(windows, sr)
