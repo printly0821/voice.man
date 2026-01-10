@@ -35,16 +35,15 @@ def mock_gpu_modules():
     # Create mock torchcrepe module
     mock_torchcrepe = MagicMock()
 
-    # Default predict behavior
+    # Default predict behavior - returns numpy arrays directly
+    # Updated to match new code that uses .cpu().numpy() without squeeze()
     mock_f0 = MagicMock()
-    mock_f0.squeeze.return_value.cpu.return_value.numpy.return_value = np.array(
-        [200.0, 200.0, 200.0, 200.0]
-    )
+    mock_f0_array = np.array([[200.0, 200.0, 200.0, 200.0]])  # 2D to trigger reshape
+    mock_f0.cpu.return_value.numpy.return_value = mock_f0_array
 
     mock_periodicity = MagicMock()
-    mock_periodicity.squeeze.return_value.cpu.return_value.numpy.return_value = np.array(
-        [0.9, 0.9, 0.9, 0.9]
-    )
+    mock_periodicity_array = np.array([[0.9, 0.9, 0.9, 0.9]])  # 2D to trigger reshape
+    mock_periodicity.cpu.return_value.numpy.return_value = mock_periodicity_array
 
     mock_torchcrepe.predict.return_value = (mock_f0, mock_periodicity)
 
@@ -128,12 +127,11 @@ def configure_torchcrepe_mock(mock_gpu_modules):
             confidence_values = [0.9, 0.9, 0.9, 0.9]
 
         mock_f0 = MagicMock()
-        mock_f0.squeeze.return_value.cpu.return_value.numpy.return_value = np.array(f0_values)
+        # Return 2D array to match new code expectations
+        mock_f0.cpu.return_value.numpy.return_value = np.array([f0_values])
 
         mock_periodicity = MagicMock()
-        mock_periodicity.squeeze.return_value.cpu.return_value.numpy.return_value = np.array(
-            confidence_values
-        )
+        mock_periodicity.cpu.return_value.numpy.return_value = np.array([confidence_values])
 
         mock_gpu_modules["torchcrepe"].predict.return_value = (mock_f0, mock_periodicity)
 
