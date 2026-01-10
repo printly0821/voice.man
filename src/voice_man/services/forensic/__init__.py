@@ -23,6 +23,13 @@ from voice_man.services.forensic.thermal_manager import (
     CRITICAL_TEMP,
 )
 
+# SPEC-PERFOPT-001 Phase 3: Pipeline Orchestration
+from voice_man.services.forensic.pipeline_orchestrator import (
+    PipelineOrchestrator,
+    MAX_QUEUE_SIZE,
+    BACKPRESSURE_RESUME_SIZE,
+)
+
 # Report generation modules
 from voice_man.reports.html_generator import ForensicHTMLGenerator
 from voice_man.reports.pdf_generator import ForensicPDFGenerator, SimplePDFGenerator
@@ -41,6 +48,10 @@ __all__ = [
     "THROTTLE_START_TEMP",
     "THROTTLE_STOP_TEMP",
     "CRITICAL_TEMP",
+    # SPEC-PERFOPT-001 Phase 3: Pipeline Orchestration
+    "PipelineOrchestrator",
+    "MAX_QUEUE_SIZE",
+    "BACKPRESSURE_RESUME_SIZE",
     # Report generation
     "ForensicHTMLGenerator",
     "ForensicPDFGenerator",
