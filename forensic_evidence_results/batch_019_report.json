@@ -1,0 +1,132 @@
+{
+  "batch_number": 19,
+  "batch_size": 3,
+  "files": {
+    "통화 녹음 신동식(3D개발자)_251114_185142.m4a": {
+      "file": "통화 녹음 신동식(3D개발자)_251114_185142.m4a",
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신동식(3D개발자)_251114_185142.m4a",
+      "file_size_mb": 1.0693292617797852,
+      "modified_time": "2026-01-08T07:48:49.772785",
+      "duration_seconds": 69.1626875,
+      "sample_rate": 16000,
+      "samples": 1106603,
+      "forensic_features": {
+        "f0_mean": 138.92937837824263,
+        "f0_std": 46.238436264692105,
+        "f0_min": 50.0,
+        "f0_max": 530.8606969354272,
+        "voiced_ratio": 0.6850138760407031,
+        "mfcc_mean": -22.956308364868164,
+        "mfcc_std": 104.45289611816406,
+        "spectral_centroid": 1884.4253098940787,
+        "zcr_mean": 0.290888698976642,
+        "rms_mean": 0.06031903624534607,
+        "rms_std": 0.06221969053149223,
+        "spectral_rolloff": 3571.8771681313597,
+        "chroma_mean": 0.41875144839286804,
+        "tempo": 133.92857142857142
+      },
+      "analysis_timestamp": "2026-01-10T19:28:53.184855",
+      "status": "✅ SUCCESS",
+      "warnings": "⚠️ 메모리 부족: 92.7%\n⚠️ CPU 온도 높음: 80.1°C"
+    },
+    "통화 녹음 신동식(3D개발자)_251118_170226.m4a": {
+      "file": "통화 녹음 신동식(3D개발자)_251118_170226.m4a",
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신동식(3D개발자)_251118_170226.m4a",
+      "file_size_mb": 3.687838554382324,
+      "modified_time": "2026-01-08T07:48:49.783786",
+      "duration_seconds": 238.656,
+      "sample_rate": 16000,
+      "samples": 3818496,
+      "forensic_features": {
+        "f0_mean": 160.34089138017424,
+        "f0_std": 67.59730042724541,
+        "f0_min": 50.0,
+        "f0_max": 540.1399784672759,
+        "voiced_ratio": 0.42512401126156324,
+        "mfcc_mean": -28.650182723999023,
+        "mfcc_std": 102.40047454833984,
+        "spectral_centroid": 1398.344431975641,
+        "zcr_mean": 0.16498348524014614,
+        "rms_mean": 0.046335358172655106,
+        "rms_std": 0.04741698130965233,
+        "spectral_rolloff": 2344.8874681592706,
+        "chroma_mean": 0.3671240508556366,
+        "tempo": 125.0
+      },
+      "analysis_timestamp": "2026-01-10T19:29:06.132789",
+      "status": "✅ SUCCESS",
+      "warnings": "⚠️ 메모리 부족: 92.5%\n⚠️ CPU 온도 높음: 80.2°C"
+    },
+    "통화 녹음 신동식(3D개발자)_251210_184229.m4a": {
+      "file": "통화 녹음 신동식(3D개발자)_251210_184229.m4a",
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신동식(3D개발자)_251210_184229.m4a",
+      "file_size_mb": 0.1926412582397461,
+      "modified_time": "2026-01-08T07:48:49.784786",
+      "duration_seconds": 12.416,
+      "sample_rate": 16000,
+      "samples": 198656,
+      "forensic_features": {
+        "f0_mean": 141.79790960120968,
+        "f0_std": 31.932381397938624,
+        "f0_min": 84.08964152537145,
+        "f0_max": 225.79288096122622,
+        "voiced_ratio": 0.5912596401028277,
+        "mfcc_mean": -26.802108764648438,
+        "mfcc_std": 109.82284545898438,
+        "spectral_centroid": 2031.2584513604436,
+        "zcr_mean": 0.37722048722686374,
+        "rms_mean": 0.05520372837781906,
+        "rms_std": 0.06204547733068466,
+        "spectral_rolloff": 3893.0952763496143,
+        "chroma_mean": 0.46495744585990906,
+        "tempo": 125.0
+      },
+      "analysis_timestamp": "2026-01-10T19:29:07.874819",
+      "status": "✅ SUCCESS",
+      "warnings": "⚠️ 메모리 부족: 92.5%\n⚠️ CPU 온도 높음: 80.2°C"
+    }
+  },
+  "batch_metrics": {
+    "total_processing_time": 19.05977511405945,
+    "average_time_per_file": 6.353258371353149,
+    "successful_files": 3,
+    "failed_files": 0,
+    "success_rate": 100.0
+  },
+  "performance_data": [
+    {
+      "timestamp": "2026-01-10T19:28:53.204577",
+      "cpu_percent": 43.2,
+      "memory": 92.7,
+      "disk": 66.4,
+      "gpu_memory": 0.0,
+      "gpu_utilization": 0.0,
+      "cpu_temperature": 80.1,
+      "gpu_temperature": 58.0,
+      "file_processing_time": 4.38961124420166
+    },
+    {
+      "timestamp": "2026-01-10T19:29:06.132803",
+      "cpu_percent": 40.4,
+      "memory": 92.5,
+      "disk": 66.4,
+      "gpu_memory": 0.0,
+      "gpu_utilization": 0.0,
+      "cpu_temperature": 80.2,
+      "gpu_temperature": 58.0,
+      "file_processing_time": 12.925187587738037
+    },
+    {
+      "timestamp": "2026-01-10T19:29:07.874831",
+      "cpu_percent": 44.7,
+      "memory": 92.5,
+      "disk": 66.4,
+      "gpu_memory": 0.0,
+      "gpu_utilization": 0.0,
+      "cpu_temperature": 80.2,
+      "gpu_temperature": 58.0,
+      "file_processing_time": 1.7444086074829102
+    }
+  ]
+}
