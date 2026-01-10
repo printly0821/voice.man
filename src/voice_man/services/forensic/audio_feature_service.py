@@ -1,12 +1,14 @@
 """
 Audio Feature Service
 SPEC-FORENSIC-001 TASK-002~010, 015~016: Audio feature analysis service
+SPEC-GPUAUDIO-001 Phase 3: GPU-accelerated audio feature extraction
 
 This service provides audio feature extraction for forensic voice analysis
-using librosa for signal processing.
+using librosa for signal processing with optional GPU acceleration.
 """
 
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple, Optional, TYPE_CHECKING
+import logging
 import numpy as np
 
 from voice_man.models.forensic.audio_features import (
@@ -19,6 +21,11 @@ from voice_man.models.forensic.audio_features import (
     EscalationZone,
 )
 
+if TYPE_CHECKING:
+    from voice_man.services.forensic.gpu import GPUAudioBackend
+
+logger = logging.getLogger(__name__)
+
 
 class AudioFeatureService:
     """
@@ -26,9 +33,9 @@ class AudioFeatureService:
 
     This service provides methods for:
     - Volume analysis (RMS, peak, dynamic range)
-    - Pitch analysis (F0, jitter)
+    - Pitch analysis (F0, jitter) with optional GPU acceleration
     - Speech rate analysis (WPM, pauses)
-    - Emotional escalation detection
+    - Emotional escalation detection with batch GPU processing
     """
 
     # Default parameters
@@ -37,10 +44,32 @@ class AudioFeatureService:
     DEFAULT_MIN_PAUSE_DURATION = 0.3  # seconds
     DEFAULT_SILENCE_THRESHOLD_DB = -40  # dB
 
-    def __init__(self):
-        """Initialize the AudioFeatureService."""
+    def __init__(self, use_gpu: bool = True):
+        """
+        Initialize the AudioFeatureService.
+
+        Args:
+            use_gpu: Whether to attempt GPU acceleration for F0 extraction.
+                     Default is True. Falls back to CPU if GPU unavailable.
+        """
         self._librosa = None
         self._parselmouth = None
+        self._use_gpu = use_gpu
+        self._gpu_backend: Optional["GPUAudioBackend"] = None
+
+    @property
+    def gpu_backend(self) -> "GPUAudioBackend":
+        """
+        Get the GPU audio backend (lazy initialization).
+
+        Returns:
+            GPUAudioBackend instance configured with use_gpu setting.
+        """
+        if self._gpu_backend is None:
+            from voice_man.services.forensic.gpu import GPUAudioBackend
+
+            self._gpu_backend = GPUAudioBackend(use_gpu=self._use_gpu)
+        return self._gpu_backend
 
     @property
     def librosa(self):
@@ -187,26 +216,21 @@ class AudioFeatureService:
 
         return 0.0
 
-    def extract_f0(
+    def _extract_f0_librosa(
         self, audio: np.ndarray, sr: int, fmin: float = 75.0, fmax: float = 600.0
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Extract fundamental frequency (F0) using pyin algorithm.
-
-        TASK-005: F0 extraction using librosa.pyin
+        Extract F0 using librosa's pyin algorithm (CPU fallback).
 
         Args:
             audio: Audio signal as numpy array
             sr: Sample rate in Hz
-            fmin: Minimum F0 in Hz (default: 75)
-            fmax: Maximum F0 in Hz (default: 600)
+            fmin: Minimum F0 in Hz
+            fmax: Maximum F0 in Hz
 
         Returns:
             Tuple of (f0_values, times)
-            - f0_values: Array of F0 values (NaN for unvoiced frames)
-            - times: Array of time values in seconds
         """
-        # Use librosa's pyin for pitch tracking
         f0, voiced_flag, voiced_probs = self.librosa.pyin(
             audio,
             fmin=fmin,
@@ -220,6 +244,46 @@ class AudioFeatureService:
         times = self.librosa.times_like(f0, sr=sr, hop_length=self.DEFAULT_HOP_LENGTH)
 
         return f0, times
+
+    def extract_f0(
+        self, audio: np.ndarray, sr: int, fmin: float = 75.0, fmax: float = 600.0
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Extract fundamental frequency (F0) with GPU acceleration.
+
+        TASK-005: F0 extraction using GPU (torchcrepe) or CPU (librosa.pyin)
+        SPEC-GPUAUDIO-001 Phase 3: GPU-accelerated F0 extraction
+
+        Args:
+            audio: Audio signal as numpy array
+            sr: Sample rate in Hz
+            fmin: Minimum F0 in Hz (default: 75)
+            fmax: Maximum F0 in Hz (default: 600)
+
+        Returns:
+            Tuple of (f0_values, times)
+            - f0_values: Array of F0 values (NaN for unvoiced frames)
+            - times: Array of time values in seconds
+        """
+        # Try GPU extraction if enabled
+        if self._use_gpu:
+            try:
+                f0, confidence = self.gpu_backend.extract_f0(audio, sr, fmin, fmax)
+
+                # Calculate time array matching librosa's format
+                times = self.librosa.times_like(f0, sr=sr, hop_length=self.DEFAULT_HOP_LENGTH)
+
+                # Adjust times array length if needed
+                if len(times) != len(f0):
+                    times = np.linspace(0, len(audio) / sr, len(f0))
+
+                return f0, times
+
+            except Exception as e:
+                logger.warning(f"GPU F0 extraction failed, falling back to CPU: {e}")
+
+        # Fallback to CPU (librosa pyin)
+        return self._extract_f0_librosa(audio, sr, fmin, fmax)
 
     def calculate_jitter(self, audio: np.ndarray, sr: int) -> float:
         """
@@ -435,6 +499,37 @@ class AudioFeatureService:
 
         return pauses
 
+    def _extract_pitch_batch(self, windows: List[np.ndarray], sr: int) -> List[float]:
+        """
+        Extract mean pitch values from multiple audio windows.
+
+        Uses GPU batch processing if available, otherwise falls back to sequential CPU.
+
+        Args:
+            windows: List of audio windows
+            sr: Sample rate in Hz
+
+        Returns:
+            List of mean pitch values (NaN for windows without valid pitch)
+        """
+        if self._use_gpu:
+            try:
+                # Stack windows into a 2D array for batch processing
+                audio_windows = np.stack(windows)
+                f0_values, confidence_values = self.gpu_backend.extract_f0_batch(audio_windows, sr)
+                return f0_values.tolist()
+            except Exception as e:
+                logger.warning(f"GPU batch F0 extraction failed, falling back to CPU: {e}")
+
+        # Fallback to sequential CPU processing
+        pitch_values = []
+        for window in windows:
+            f0, _ = self._extract_f0_librosa(window, sr)
+            valid_f0 = f0[~np.isnan(f0)]
+            pitch_values.append(np.mean(valid_f0) if len(valid_f0) > 0 else np.nan)
+
+        return pitch_values
+
     def detect_emotional_escalation(
         self,
         audio: np.ndarray,
@@ -447,6 +542,7 @@ class AudioFeatureService:
         Detect emotional escalation zones based on volume and pitch changes.
 
         TASK-016: Emotional escalation detection
+        SPEC-GPUAUDIO-001 Phase 3: GPU batch processing for F0 extraction
 
         Args:
             audio: Audio signal as numpy array
@@ -465,32 +561,35 @@ class AudioFeatureService:
         window_samples = int(window_duration * sr)
         hop_samples = window_samples // 2
 
-        # Calculate RMS and pitch over windows
-        rms_values = []
-        pitch_values = []
+        # Collect all windows for batch processing
+        windows = []
         times = []
+        rms_values = []
 
         for start in range(0, len(audio) - window_samples, hop_samples):
             end = start + window_samples
             window = audio[start:end]
+            windows.append(window)
+            times.append(start / sr)
 
-            # RMS for this window
+            # RMS for this window (can't be batched easily)
             rms, rms_db = self.calculate_rms_amplitude(window, sr)
             rms_values.append(rms_db)
 
-            # Pitch for this window
-            f0, _ = self.extract_f0(window, sr)
-            valid_f0 = f0[~np.isnan(f0)]
-            pitch_values.append(np.mean(valid_f0) if len(valid_f0) > 0 else np.nan)
+        if len(windows) < 2:
+            return []
 
-            times.append(start / sr)
+        # Convert to numpy arrays
+        rms_values = np.array(rms_values)
+        times = np.array(times)
+
+        # Batch F0 extraction using GPU if available
+        pitch_values = self._extract_pitch_batch(windows, sr)
 
         if len(rms_values) < 2:
             return []
 
-        rms_values = np.array(rms_values)
         pitch_values = np.array(pitch_values)
-        times = np.array(times)
 
         # Detect escalation (increasing RMS and/or pitch)
         i = 0
