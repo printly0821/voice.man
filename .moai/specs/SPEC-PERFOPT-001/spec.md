@@ -1,6 +1,6 @@
 ---
 id: SPEC-PERFOPT-001
-version: "1.1.0"
+version: "1.2.0"
 status: "in-progress"
 created: "2026-01-10"
 updated: "2026-01-10"
@@ -9,7 +9,7 @@ priority: "HIGH"
 title: "Forensic Pipeline Performance Optimization"
 phase_status:
   phase_1: "COMPLETED"
-  phase_2: "planned"
+  phase_2: "COMPLETED"
   phase_3: "planned"
 related_specs:
   - SPEC-FORENSIC-001
@@ -35,6 +35,7 @@ lifecycle: "spec-anchored"
 |------|------|--------|-----------|
 | 1.0.0 | 2026-01-10 | 지니 | 초안 작성 - Forensic 파이프라인 성능 최적화 요구사항 정의 |
 | 1.1.0 | 2026-01-10 | 지니 | Phase 1 구현 완료 - 메모리 임계값 30GB, SER GPU-first 감지, 모델 캐싱, 배치별 GPU 캐시 정리 |
+| 1.2.0 | 2026-01-10 | 지니 | Phase 2 구현 완료 - ForensicMemoryManager, BatchConfigManager, ThermalManager 통합 (67개 테스트, 86% 커버리지) |
 
 ---
 

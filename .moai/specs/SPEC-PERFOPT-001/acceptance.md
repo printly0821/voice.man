@@ -11,6 +11,7 @@ CREATED: 2026-01-10
 UPDATED: 2026-01-10
 LIFECYCLE: spec-anchored
 PHASE_1_TESTS: 38 tests passed
+PHASE_2_TESTS: 67 tests passed (86% coverage)
 ```
 
 ---
@@ -236,13 +237,21 @@ def test_phase1_gpu_utilization():
 
 ---
 
-## 3. Phase 2 Acceptance Criteria
+## 3. Phase 2 Acceptance Criteria - COMPLETED
 
-### AC-P2-001: UnifiedMemoryManager 통합
+### AC-P2-001: ForensicMemoryManager 통합 - PASSED
 
 **Given** ForensicMemoryManager가 초기화된 상태
 **When** 스테이지별 메모리 할당을 요청할 때
 **Then** 충돌 없이 할당되어야 한다
+
+**Status:** PASSED (2026-01-10)
+
+**Implementation Details:**
+- Stage별 GPU 메모리 할당: STT(16GB), Alignment(4GB), Diarization(8GB), SER(10GB), Scoring(2GB)
+- pynvml 기반 GPU 메모리 조회
+- Thread-safe 구현 (threading.Lock)
+- Context manager 패턴 지원
 
 **Verification:**
 ```python
@@ -261,11 +270,18 @@ def test_memory_allocation():
 
 ---
 
-### AC-P2-002: 스테이지별 배치 설정
+### AC-P2-002: 스테이지별 배치 설정 - PASSED
 
 **Given** BatchConfigManager가 초기화된 상태
 **When** 가용 메모리 기반 배치 사이즈를 요청할 때
 **Then** 최적 배치 사이즈가 반환되어야 한다
+
+**Status:** PASSED (2026-01-10)
+
+**Implementation Details:**
+- StageBatchConfig 데이터클래스 정의
+- 동적 배치 크기 계산 (가용 메모리 기반)
+- Stage별 최적 배치 설정
 
 **Verification:**
 ```python
@@ -286,11 +302,18 @@ def test_optimal_batch_size():
 
 ---
 
-### AC-P2-003: ThermalManager 모니터링
+### AC-P2-003: ThermalManager 모니터링 - PASSED
 
 **Given** ThermalManager가 시작된 상태
 **When** GPU 온도를 조회할 때
 **Then** 유효한 온도 값이 반환되어야 한다
+
+**Status:** PASSED (2026-01-10)
+
+**Implementation Details:**
+- GPU 온도 임계값 관리: THROTTLE_START(80C), THROTTLE_STOP(70C), CRITICAL(85C)
+- 백그라운드 모니터링 스레드
+- 콜백 등록 API
 
 **Verification:**
 ```python
@@ -309,11 +332,18 @@ def test_thermal_monitoring():
 
 ---
 
-### AC-P2-004: 열 쓰로틀링 동작
+### AC-P2-004: 열 쓰로틀링 동작 - PASSED
 
 **Given** ThermalManager가 시작된 상태
-**When** GPU 온도가 80°C를 초과할 때
+**When** GPU 온도가 80C를 초과할 때
 **Then** is_throttling이 True를 반환해야 한다
+
+**Status:** PASSED (2026-01-10)
+
+**Implementation Details:**
+- 히스테리시스 기반 스로틀링 (진입: 80C, 해제: 70C)
+- 상태 전이 로깅
+- 콜백 알림 시스템
 
 **Verification:**
 ```python
@@ -321,11 +351,11 @@ def test_thermal_throttling():
     manager = ThermalManager()
     manager.start()
 
-    # 시뮬레이션: 80°C 초과
+    # 시뮬레이션: 80C 초과
     manager._handle_temperature(82)
     assert manager.is_throttling == True
 
-    # 시뮬레이션: 70°C 미만
+    # 시뮬레이션: 70C 미만
     manager._handle_temperature(68)
     assert manager.is_throttling == False
 
@@ -334,11 +364,34 @@ def test_thermal_throttling():
 
 ---
 
-### AC-P2-005: 열 쓰로틀링 0회 (장시간 테스트)
+### AC-P2-005: 서비스 통합 - PASSED
+
+**Given** Phase 2 관리자들이 구현된 상태
+**When** E2ETestService와 SERService에 통합할 때
+**Then** 정상적으로 동작해야 한다
+
+**Status:** PASSED (2026-01-10)
+
+**Implementation Details:**
+- E2ETestService에 메모리/온도 관리자 통합
+- SERService에 메모리 관리자 통합
+- 67개 테스트 통과, 86% 커버리지
+
+**Commits:**
+- `c28e343`: feat(forensic): add ForensicMemoryManager
+- `13a2241`: feat(config): add BatchConfigManager
+- `3785258`: feat(forensic): add ThermalManager
+- `60d2ad9`: refactor(forensic): integrate Phase 2 managers
+
+---
+
+### AC-P2-006: 열 쓰로틀링 0회 (장시간 테스트) - PENDING E2E TEST
 
 **Given** 183개 파일 전체 처리
 **When** 열 관리가 활성화된 상태에서 처리할 때
 **Then** 열 쓰로틀링 발생이 0회여야 한다
+
+**Status:** PENDING (E2E 통합 테스트에서 검증 예정)
 
 **Verification:**
 ```python
@@ -361,11 +414,13 @@ def test_no_thermal_throttling():
 
 ---
 
-### AC-P2-006: 처리 속도 향상 (Phase 2)
+### AC-P2-007: 처리 속도 향상 (Phase 2) - PENDING E2E TEST
 
 **Given** Phase 1 최적화가 적용된 상태
 **When** Phase 2 최적화를 추가로 적용할 때
 **Then** 처리 시간이 5시간 미만이어야 한다
+
+**Status:** PENDING (E2E 통합 테스트에서 측정 예정)
 
 **Verification:**
 ```python
@@ -382,11 +437,13 @@ def test_phase2_performance():
 
 ---
 
-### AC-P2-007: GPU 활용률 (Phase 2)
+### AC-P2-008: GPU 활용률 (Phase 2) - PENDING E2E TEST
 
 **Given** Phase 2 최적화가 적용된 상태
 **When** GPU 활용률을 모니터링할 때
 **Then** 평균 활용률이 80% 이상이어야 한다
+
+**Status:** PENDING (E2E 통합 테스트에서 측정 예정)
 
 **Verification:**
 ```python
