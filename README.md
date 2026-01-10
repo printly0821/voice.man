@@ -279,6 +279,10 @@ flowchart TB
 - **librosa 0.10.2+**: 음향 특성 추출 (RMS, F0, spectral)
 - **parselmouth 0.4.3+**: Praat 기반 음성학 분석 (jitter, shimmer, HNR, formant)
 
+### GPU 가속 오디오 처리
+- **torchcrepe 0.0.22+**: GPU 배치 처리 F0 추출 (librosa.pyin 대비 160x 성능 향상)
+- **nnAudio 0.3.2+**: GPU 기반 스펙트로그램 생성 (STFT, Mel, CQT)
+
 ### GPU 가속 및 병렬 처리
 - **PyTorch 2.5+**: GPU 연산 프레임워크
 - **CUDA 12.1+**: NVIDIA GPU 가속
@@ -953,7 +957,12 @@ voice.man/
 │               ├── crime_language_service.py       # 범죄 언어 탐지 서비스
 │               ├── ser_service.py                  # Speech Emotion Recognition
 │               ├── cross_validation_service.py     # 텍스트-음성 교차검증
-│               └── forensic_scoring_service.py    # 포렌식 스코어링 서비스
+│               ├── forensic_scoring_service.py    # 포렌식 스코어링 서비스
+│               └── gpu/                            # GPU 가속 오디오 처리
+│                   ├── __init__.py
+│                   ├── backend.py                  # GPU 오디오 백엔드
+│                   ├── crepe_extractor.py          # TorchCrepe F0 추출기
+│                   └── memory_manager.py           # GPU 메모리 관리
 │       ├── report_service.py          # 보고서 서비스
 │       ├── comprehensive_report_service.py  # 종합 보고서 서비스
 │       └── chart_service.py           # 차트 생성 서비스
@@ -1261,6 +1270,7 @@ MIT License
 - [SPEC-WHISPERX-001](.moai/specs/SPEC-WHISPERX-001/spec.md) - WhisperX 통합 파이프라인
 - [SPEC-E2ETEST-001](.moai/specs/SPEC-E2ETEST-001/spec.md) - E2E 통합 테스트 (GPU 병렬 배치 처리)
 - [SPEC-FORENSIC-001](.moai/specs/SPEC-FORENSIC-001/spec.md) - 범죄 프로파일링 기반 음성 포렌식 분석
+- [SPEC-GPUAUDIO-001](.moai/specs/SPEC-GPUAUDIO-001/spec.md) - GPU 가속 오디오 피처 추출 (torchcrepe, nnAudio)
 
 **버전**: 1.4.0
 **상태**: 완료
