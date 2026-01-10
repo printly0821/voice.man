@@ -11,9 +11,13 @@ SPEC-E2ETEST-001 Requirements Implemented:
 - S2: Failed file retry queue (exponential backoff)
 - N1: GPU memory must not exceed 95%
 - N3: Original file modification prohibited
+
+SPEC-PERFOPT-001 Performance Optimizations:
+- Per-batch GPU cache cleanup via _cleanup_after_batch()
 """
 
 import asyncio
+import gc
 import hashlib
 import json
 import logging
@@ -360,12 +364,46 @@ class E2ETestRunner:
                 )
                 self._current_batch_size = new_size
 
+    async def _cleanup_after_batch(self) -> Optional[Dict[str, Any]]:
+        """
+        SPEC-PERFOPT-001: Clean up GPU memory after each batch.
+
+        Performs garbage collection and clears CUDA cache to prevent
+        memory accumulation during long batch processing sessions.
+
+        Returns:
+            Optional dictionary with cleanup statistics, or None if cleanup skipped.
+        """
+        logger.debug("Cleaning up after batch processing...")
+
+        # Force garbage collection
+        gc.collect()
+
+        # Clear CUDA cache if available
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                logger.debug("GPU cache cleared after batch")
+
+                # Optionally collect IPC memory
+                if hasattr(torch.cuda, "ipc_collect"):
+                    torch.cuda.ipc_collect()
+
+        except ImportError:
+            logger.debug("torch not available, skipping GPU cache cleanup")
+        except Exception as e:
+            logger.warning(f"Error clearing GPU cache: {e}")
+
+        return None
+
     async def run(
         self,
         files: List[Path],
         progress_callback: Optional[Callable[[int, int, float, str, str], None]] = None,
     ) -> E2ETestResult:
-        """Run E2E test on list of files.
+        """Run E2E test on list of files with TRUE parallel batch processing.
 
         Args:
             files: List of audio file paths to process
@@ -400,28 +438,66 @@ class E2ETestRunner:
 
         file_results: List[FileProcessingResult] = []
         failed_count = 0
+        processed_count = 0
 
-        for i, file_path in enumerate(files):
-            # Adjust batch size based on GPU memory
+        # TRUE PARALLEL PROCESSING: Process files in batches concurrently
+        batch_size = self._current_batch_size
+        total_files = len(files)
+
+        for batch_start in range(0, total_files, batch_size):
+            batch_end = min(batch_start + batch_size, total_files)
+            batch_files = files[batch_start:batch_end]
+
+            # Adjust batch size based on GPU memory before each batch
             await self._adjust_batch_size()
 
-            # Process file with retry
-            result = await self._process_with_retry(file_path)
-            file_results.append(result)
+            # Process batch files CONCURRENTLY using asyncio.gather
+            logger.info(
+                f"Processing batch {batch_start // batch_size + 1}: files {batch_start + 1}-{batch_end} of {total_files}"
+            )
 
-            if result.status == "failed":
-                failed_count += 1
+            batch_tasks = [self._process_with_retry(file_path) for file_path in batch_files]
+            batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
 
-            # Progress callback
-            elapsed = time.time() - start_time
-            if progress_callback:
-                progress_callback(
-                    i + 1,
-                    len(files),
-                    elapsed,
-                    file_path.name,
-                    result.status,
-                )
+            # Process batch results
+            for i, result in enumerate(batch_results):
+                file_path = batch_files[i]
+
+                if isinstance(result, Exception):
+                    # Handle exception as failed result
+                    result = FileProcessingResult(
+                        file_path=str(file_path),
+                        status="failed",
+                        processing_time_seconds=0.0,
+                        transcript_text=None,
+                        segments=None,
+                        speakers=None,
+                        error=str(result),
+                    )
+
+                file_results.append(result)
+                processed_count += 1
+
+                if result.status == "failed":
+                    failed_count += 1
+
+                # Progress callback for each completed file
+                elapsed = time.time() - start_time
+                if progress_callback:
+                    progress_callback(
+                        processed_count,
+                        total_files,
+                        elapsed,
+                        file_path.name,
+                        result.status,
+                    )
+
+            logger.info(
+                f"Batch complete: {len([r for r in batch_results if not isinstance(r, Exception) and r.status == 'success'])}/{len(batch_files)} successful"
+            )
+
+            # SPEC-PERFOPT-001: Clean up GPU memory after each batch
+            await self._cleanup_after_batch()
 
         total_time = time.time() - start_time
 
