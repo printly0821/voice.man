@@ -3,11 +3,13 @@ Memory management service for audio file processing.
 
 Provides garbage collection, memory monitoring, and resource cleanup.
 Extended for GPU memory monitoring as per SPEC-PARALLEL-001.
+Optimized for forensic analysis workloads as per SPEC-PERFOPT-001.
 
 EARS Requirements Implemented:
 - S2: GC trigger at 80% system memory usage
 - U2: GPU memory real-time monitoring
 - N2: Unlimited memory allocation prohibited (80% system, 95% GPU limits)
+- SPEC-PERFOPT-001: 30GB forensic memory threshold for heavy ML model workloads
 """
 
 import gc
@@ -18,6 +20,11 @@ from dataclasses import dataclass, field
 from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
+
+# SPEC-PERFOPT-001: Forensic analysis memory threshold (30GB)
+# This higher threshold is optimized for forensic audio analysis workloads
+# that require loading multiple ML models (WhisperX, SER, etc.) simultaneously.
+FORENSIC_MEMORY_THRESHOLD_MB = 30000
 
 
 @dataclass
@@ -59,7 +66,7 @@ class MemoryManager:
 
     def __init__(
         self,
-        threshold_mb: float = 100,
+        threshold_mb: float = FORENSIC_MEMORY_THRESHOLD_MB,
         enable_gc: bool = True,
         enable_gpu_monitoring: bool = False,
         system_memory_threshold: float = 80.0,  # S2: 80% system memory threshold
@@ -67,8 +74,13 @@ class MemoryManager:
     ) -> None:
         """Initialize memory manager.
 
+        SPEC-PERFOPT-001: Default threshold is 30GB (30000MB) for forensic
+        audio analysis workloads that require loading multiple ML models
+        (WhisperX, SER, etc.) simultaneously.
+
         Args:
-            threshold_mb: Memory threshold in MB for automatic garbage collection
+            threshold_mb: Memory threshold in MB for automatic garbage collection.
+                          Default is 30000MB (30GB) for forensic workloads.
             enable_gc: Whether to enable automatic garbage collection
             enable_gpu_monitoring: Whether to monitor GPU memory
             system_memory_threshold: System memory percentage threshold for GC (S2)
@@ -87,6 +99,7 @@ class MemoryManager:
         """Check if GPU is available for monitoring."""
         try:
             import torch
+
             return torch.cuda.is_available()
         except ImportError:
             return False
@@ -132,6 +145,7 @@ class MemoryManager:
         """Clear GPU memory cache."""
         try:
             import torch
+
             torch.cuda.empty_cache()
             logger.debug("GPU cache cleared")
         except Exception as e:
@@ -233,6 +247,7 @@ class MemoryManager:
         """
         try:
             import pynvml
+
             pynvml.nvmlInit()
             handle = pynvml.nvmlDeviceGetHandleByIndex(0)
             mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
