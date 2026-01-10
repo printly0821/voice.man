@@ -2,7 +2,7 @@
 
 ```yaml
 id: SPEC-GPUAUDIO-001
-version: 1.1.0
+version: 1.2.0
 status: in_progress
 created: 2026-01-10
 updated: 2026-01-10
@@ -19,6 +19,7 @@ related_specs: [SPEC-FORENSIC-001]
 
 | Version | Date       | Author | Description                          |
 |---------|------------|--------|--------------------------------------|
+| 1.2.0   | 2026-01-10 | 지니   | Phase 2 완료: NNAudioProcessor 기반 GPU 스펙트로그램 구현 |
 | 1.1.0   | 2026-01-10 | 지니   | Phase 1 완료: TorchCrepe 기반 GPU F0 추출 구현 |
 | 1.0.0   | 2026-01-10 | 지니   | 초기 SPEC 작성                        |
 
