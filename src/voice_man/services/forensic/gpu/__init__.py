@@ -8,8 +8,10 @@ using torchcrepe for F0 extraction and nnAudio for spectrogram generation.
 
 from voice_man.services.forensic.gpu.backend import GPUAudioBackend
 from voice_man.services.forensic.gpu.crepe_extractor import TorchCrepeExtractor
+from voice_man.services.forensic.gpu.nnaudio_processor import NNAudioProcessor
 
 __all__ = [
     "GPUAudioBackend",
     "TorchCrepeExtractor",
+    "NNAudioProcessor",
 ]

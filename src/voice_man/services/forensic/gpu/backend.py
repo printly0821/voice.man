@@ -12,6 +12,7 @@ import logging
 import numpy as np
 
 from voice_man.services.forensic.gpu.crepe_extractor import TorchCrepeExtractor
+from voice_man.services.forensic.gpu.nnaudio_processor import NNAudioProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ class GPUAudioBackend:
         self._use_gpu = use_gpu
         self._torch = None
         self._crepe_extractor: Optional[TorchCrepeExtractor] = None
+        self._nnaudio_processor: Optional[NNAudioProcessor] = None
 
     @property
     def torch(self):
@@ -126,3 +128,99 @@ class GPUAudioBackend:
                 - confidence_values: Mean confidence for each window (num_windows,)
         """
         return self.crepe_extractor.extract_f0_batch(audio_windows, sr, fmin, fmax)
+
+    @property
+    def nnaudio_processor(self) -> NNAudioProcessor:
+        """
+        Get the NNAudio processor (lazy initialization).
+
+        Returns:
+            NNAudioProcessor instance configured for this backend
+        """
+        if self._nnaudio_processor is None:
+            self._nnaudio_processor = NNAudioProcessor(
+                device=self.device,
+            )
+        return self._nnaudio_processor
+
+    def compute_stft(
+        self,
+        audio: np.ndarray,
+        sr: int,
+        n_fft: int = 2048,
+        hop_length: int = 512,
+        return_complex: bool = False,
+    ) -> np.ndarray:
+        """
+        Compute STFT of audio signal using GPU acceleration.
+
+        Args:
+            audio: Audio signal as numpy array
+            sr: Sample rate in Hz
+            n_fft: FFT window size
+            hop_length: Hop length in samples
+            return_complex: If True, return complex STFT
+
+        Returns:
+            STFT result as numpy array (freq_bins, time_frames)
+        """
+        # Create processor with specified parameters if different from default
+        if (
+            self._nnaudio_processor is None
+            or self._nnaudio_processor.n_fft != n_fft
+            or self._nnaudio_processor.hop_length != hop_length
+            or self._nnaudio_processor.sr != sr
+        ):
+            self._nnaudio_processor = NNAudioProcessor(
+                n_fft=n_fft,
+                hop_length=hop_length,
+                sr=sr,
+                device=self.device,
+            )
+
+        return self.nnaudio_processor.compute_stft(audio, return_complex=return_complex)
+
+    def compute_mel_spectrogram(
+        self,
+        audio: np.ndarray,
+        sr: int,
+        n_fft: int = 2048,
+        hop_length: int = 512,
+        n_mels: int = 128,
+        power: float = 2.0,
+        normalize: bool = False,
+    ) -> np.ndarray:
+        """
+        Compute Mel spectrogram of audio signal using GPU acceleration.
+
+        Args:
+            audio: Audio signal as numpy array
+            sr: Sample rate in Hz
+            n_fft: FFT window size
+            hop_length: Hop length in samples
+            n_mels: Number of Mel frequency bins
+            power: Exponent for the magnitude
+            normalize: If True, normalize the spectrogram
+
+        Returns:
+            Mel spectrogram as numpy array (n_mels, time_frames)
+        """
+        # Create processor with specified parameters if different from default
+        if (
+            self._nnaudio_processor is None
+            or self._nnaudio_processor.n_fft != n_fft
+            or self._nnaudio_processor.hop_length != hop_length
+            or self._nnaudio_processor.n_mels != n_mels
+            or self._nnaudio_processor.sr != sr
+        ):
+            self._nnaudio_processor = NNAudioProcessor(
+                n_fft=n_fft,
+                hop_length=hop_length,
+                n_mels=n_mels,
+                sr=sr,
+                device=self.device,
+            )
+
+        return self.nnaudio_processor.compute_mel_spectrogram(
+            audio, power=power, normalize=normalize
+        )
