@@ -138,3 +138,141 @@ def configure_torchcrepe_mock(mock_gpu_modules):
         mock_gpu_modules["torchcrepe"].predict.return_value = (mock_f0, mock_periodicity)
 
     return _configure
+
+
+# ============================================================================
+# NNAudio Mock Fixtures for Phase 2
+# ============================================================================
+
+
+class MockSTFTLayer:
+    """Mock STFT layer that properly handles .to() and __call__."""
+
+    def __init__(self, n_fft=2048, hop_length=512, **kwargs):
+        self.n_fft = n_fft
+        self.hop_length = hop_length
+
+    def to(self, device):
+        """Return self for chaining."""
+        return self
+
+    def __call__(self, x):
+        """Mock STFT forward pass - returns magnitude spectrogram."""
+        # Determine audio length from input
+        audio_len = 16000  # Default
+
+        # Create mock output tensor with correct shape
+        freq_bins = self.n_fft // 2 + 1
+        time_frames = (audio_len - self.n_fft) // self.hop_length + 1
+        time_frames = max(1, time_frames)
+
+        # Create actual numpy output
+        output_data = np.abs(np.random.randn(1, freq_bins, time_frames).astype(np.float32))
+
+        # Create mock tensor with proper chain
+        mock_output = MagicMock()
+        mock_output.squeeze.return_value.cpu.return_value.numpy.return_value = output_data[0]
+        return mock_output
+
+
+class MockMelLayer:
+    """Mock MelSpectrogram layer that properly handles .to() and __call__."""
+
+    def __init__(self, n_fft=2048, hop_length=512, n_mels=128, **kwargs):
+        self.n_fft = n_fft
+        self.hop_length = hop_length
+        self.n_mels = n_mels
+
+    def to(self, device):
+        """Return self for chaining."""
+        return self
+
+    def __call__(self, x):
+        """Mock Mel spectrogram forward pass."""
+        audio_len = 16000  # Default
+        time_frames = (audio_len - self.n_fft) // self.hop_length + 1
+        time_frames = max(1, time_frames)
+
+        output_data = np.abs(np.random.randn(1, self.n_mels, time_frames).astype(np.float32))
+
+        mock_output = MagicMock()
+        mock_output.squeeze.return_value.cpu.return_value.numpy.return_value = output_data[0]
+        return mock_output
+
+
+@pytest.fixture
+def mock_nnaudio_modules(mock_gpu_modules):
+    """
+    Mock nnAudio-related modules for NNAudioProcessor testing.
+
+    This fixture mocks:
+    - nnAudio.features.stft.STFT: GPU STFT layer
+    - nnAudio.features.mel.MelSpectrogram: GPU Mel spectrogram layer
+    - torch: PyTorch for tensor operations
+
+    Uses the existing mock_gpu_modules as a dependency.
+    """
+    # Create mock nnAudio module structure
+    mock_nnaudio = MagicMock()
+    mock_nnaudio_features = MagicMock()
+    mock_nnaudio_stft = MagicMock()
+    mock_nnaudio_mel = MagicMock()
+
+    # Use class-based mocks that handle .to() properly
+    mock_nnaudio_stft.STFT = MockSTFTLayer
+    mock_nnaudio_mel.MelSpectrogram = MockMelLayer
+
+    # Set up module structure
+    mock_nnaudio.features = mock_nnaudio_features
+    mock_nnaudio_features.stft = mock_nnaudio_stft
+    mock_nnaudio_features.mel = mock_nnaudio_mel
+
+    # Store original modules
+    original_nnaudio = sys.modules.get("nnAudio")
+    original_nnaudio_features = sys.modules.get("nnAudio.features")
+    original_nnaudio_stft = sys.modules.get("nnAudio.features.stft")
+    original_nnaudio_mel = sys.modules.get("nnAudio.features.mel")
+
+    # Inject mocks
+    sys.modules["nnAudio"] = mock_nnaudio
+    sys.modules["nnAudio.features"] = mock_nnaudio_features
+    sys.modules["nnAudio.features.stft"] = mock_nnaudio_stft
+    sys.modules["nnAudio.features.mel"] = mock_nnaudio_mel
+
+    yield {
+        "torch": mock_gpu_modules["torch"],
+        "torchcrepe": mock_gpu_modules["torchcrepe"],
+        "nnAudio": mock_nnaudio,
+    }
+
+    # Restore original modules
+    if original_nnaudio is not None:
+        sys.modules["nnAudio"] = original_nnaudio
+    elif "nnAudio" in sys.modules:
+        del sys.modules["nnAudio"]
+
+    if original_nnaudio_features is not None:
+        sys.modules["nnAudio.features"] = original_nnaudio_features
+    elif "nnAudio.features" in sys.modules:
+        del sys.modules["nnAudio.features"]
+
+    if original_nnaudio_stft is not None:
+        sys.modules["nnAudio.features.stft"] = original_nnaudio_stft
+    elif "nnAudio.features.stft" in sys.modules:
+        del sys.modules["nnAudio.features.stft"]
+
+    if original_nnaudio_mel is not None:
+        sys.modules["nnAudio.features.mel"] = original_nnaudio_mel
+    elif "nnAudio.features.mel" in sys.modules:
+        del sys.modules["nnAudio.features.mel"]
+
+
+@pytest.fixture
+def mock_nnaudio_modules_with_cuda(mock_nnaudio_modules):
+    """
+    Mock nnAudio modules with CUDA available.
+
+    Extends mock_nnaudio_modules to simulate CUDA being available.
+    """
+    with patch("torch.cuda.is_available", return_value=True):
+        yield mock_nnaudio_modules
