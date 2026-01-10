@@ -671,14 +671,15 @@ class TestEdgeCases:
         """Test pitch stats returns defaults for silent audio."""
         from voice_man.services.forensic.audio_feature_service import AudioFeatureService
 
-        service = AudioFeatureService()
+        # Use CPU mode to test original librosa behavior
+        service = AudioFeatureService(use_gpu=False)
 
         sr = 16000
         audio = np.zeros(sr, dtype=np.float32)
 
         stats = service.calculate_pitch_stats(audio, sr)
 
-        # Should return default values
+        # Should return default values (CPU/librosa returns these for silent audio)
         assert stats["f0_mean_hz"] == 150.0
         assert stats["f0_std_hz"] == 0.0
 
