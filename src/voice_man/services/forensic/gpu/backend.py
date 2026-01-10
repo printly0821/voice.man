@@ -75,10 +75,14 @@ class GPUAudioBackend:
 
         Returns:
             TorchCrepeExtractor instance
+
+        Note:
+            Uses "tiny" model by default for optimal performance (70x+ realtime).
+            Change to "full" for higher accuracy at cost of speed (27x realtime).
         """
         if self._crepe_extractor is None:
             self._crepe_extractor = TorchCrepeExtractor(
-                model="full",
+                model="tiny",  # Optimized for speed (70x realtime vs 27x with full)
                 device=self.device,
             )
         return self._crepe_extractor
