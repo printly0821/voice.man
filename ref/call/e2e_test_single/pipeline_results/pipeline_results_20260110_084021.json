@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-01-10T08:40:21.414396",
+  "input_dir": "ref/call/e2e_test_single",
+  "total_files": 1,
+  "processed": 1,
+  "success": 1,
+  "failed": 0,
+  "success_rate": "100.0%",
+  "total_time_seconds": 663.53,
+  "avg_time_per_file": 663.53,
+  "results": [
+    {
+      "file": "통화 녹음 신기연_250723_211739.m4a",
+      "status": "success"
+    }
+  ]
+}

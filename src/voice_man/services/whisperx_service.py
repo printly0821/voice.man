@@ -70,6 +70,7 @@ class WhisperXService:
         audio_path: str,
         num_speakers: Optional[int] = None,
         progress_callback: Optional[Callable[[str, float, str], None]] = None,
+        existing_transcription: Optional[Dict[str, Any]] = None,
     ) -> PipelineResult:
         """
         Process audio file through WhisperX pipeline.
@@ -78,6 +79,8 @@ class WhisperXService:
             audio_path: Path to audio file
             num_speakers: Number of speakers (None for auto-detection)
             progress_callback: Optional callback for progress updates
+            existing_transcription: Optional existing transcription to reuse.
+                                  Skips transcription/alignment, only diarization.
 
         Returns:
             PipelineResult with transcription and speaker data
@@ -98,6 +101,7 @@ class WhisperXService:
                 converted_path,
                 num_speakers=num_speakers,
                 progress_callback=progress_callback,
+                existing_transcription=existing_transcription,
             )
 
         return result

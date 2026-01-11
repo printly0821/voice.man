@@ -16,6 +16,7 @@ from voice_man.models.forensic.cross_validation import (
     TextAnalysisResult,
     VoiceAnalysisResult,
 )
+from voice_man.models.forensic.emotion_recognition import MultiModelEmotionResult
 from voice_man.services.forensic.crime_language_service import CrimeLanguageAnalysisService
 from voice_man.services.forensic.ser_service import SERService
 
@@ -325,11 +326,18 @@ class CrossValidationService:
 
         return min(1.0, intensity)
 
-    def analyze_voice(self, audio_path: str) -> VoiceAnalysisResult:
+    def analyze_voice(
+        self,
+        audio_path: str,
+        precomputed_emotion_result: Optional[MultiModelEmotionResult] = None,
+    ) -> VoiceAnalysisResult:
         """Analyze voice for emotion and stress.
 
         Args:
             audio_path: Path to the audio file.
+            precomputed_emotion_result: Optional pre-computed SER result to avoid
+                duplicate analysis. If provided, skips SER inference entirely.
+                SPEC-PERFOPT-001: Performance optimization to eliminate redundant SER calls.
 
         Returns:
             VoiceAnalysisResult with analysis results.
@@ -337,8 +345,12 @@ class CrossValidationService:
         Raises:
             FileNotFoundError: If audio file does not exist.
         """
-        # Get emotion analysis from SER service
-        emotion_result = self._ser_service.analyze_ensemble_from_file(audio_path)
+        # SPEC-PERFOPT-001: Use precomputed result if available (avoids duplicate SER)
+        if precomputed_emotion_result is not None:
+            emotion_result = precomputed_emotion_result
+        else:
+            # Fallback: compute SER from file (original behavior)
+            emotion_result = self._ser_service.analyze_ensemble_from_file(audio_path)
         forensic_indicators = self._ser_service.get_forensic_emotion_indicators(emotion_result)
 
         # Extract dominant emotion
@@ -693,12 +705,19 @@ class CrossValidationService:
         else:
             return DiscrepancySeverity.LOW
 
-    def cross_validate(self, text: str, audio_path: str) -> CrossValidationResult:
+    def cross_validate(
+        self,
+        text: str,
+        audio_path: str,
+        precomputed_emotion_result: Optional[MultiModelEmotionResult] = None,
+    ) -> CrossValidationResult:
         """Perform complete cross-validation analysis.
 
         Args:
             text: The text transcript to analyze.
             audio_path: Path to the audio file.
+            precomputed_emotion_result: Optional pre-computed SER result to avoid
+                duplicate analysis. SPEC-PERFOPT-001 optimization.
 
         Returns:
             CrossValidationResult with complete analysis.
@@ -713,8 +732,8 @@ class CrossValidationService:
         # Analyze text
         text_analysis = self.analyze_text(text)
 
-        # Analyze voice
-        voice_analysis = self.analyze_voice(audio_path)
+        # Analyze voice (use precomputed SER result if available)
+        voice_analysis = self.analyze_voice(audio_path, precomputed_emotion_result)
 
         # Detect discrepancies
         discrepancies = self.detect_discrepancies(text_analysis, voice_analysis)

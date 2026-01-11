@@ -25,13 +25,105 @@ import logging
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
 
 logger = logging.getLogger(__name__)
 
 # Lazy imports for optional dependencies
 whisperx = None
 torch = None
+
+
+class _DistilWhisperWrapper:
+    """
+    Wrapper for Distil-Whisper model to be compatible with WhisperX pipeline.
+
+    Distil-Whisper is a distilled version of Whisper that provides:
+    - 4-6x faster transcription
+    - 99% of large-v3 accuracy
+    - Lower memory footprint
+    """
+
+    def __init__(self, model, processor, language: str = "ko"):
+        """
+        Initialize Distil-Whisper wrapper.
+
+        Args:
+            model: Transformers model for speech seq2seq
+            processor: Transformers processor for tokenization
+            language: Language code for transcription
+        """
+        self.model = model
+        self.processor = processor
+        self.language = language
+        self._device = next(model.parameters()).device
+
+    def transcribe(
+        self,
+        audio: Any,  # np.ndarray
+        batch_size: int = 16,
+        language: str | None = None,
+    ) -> dict:
+        """
+        Transcribe audio using Distil-Whisper.
+
+        Args:
+            audio: Audio numpy array
+            batch_size: Batch size for processing (ignored for single file)
+            language: Language code (uses init language if None)
+
+        Returns:
+            Dictionary with segments and language
+        """
+        import torch
+        import numpy as np
+
+        language = language or self.language
+
+        # Prepare input features - match model dtype
+        model_dtype = next(self.model.parameters()).dtype
+        input_features = self.processor(
+            audio,
+            sampling_rate=16000,
+            return_tensors="pt",
+        ).input_features.to(self._device, dtype=model_dtype)
+
+        # Generate transcription
+        with torch.no_grad():
+            forced_decoder_ids = self.processor.get_decoder_prompt_ids(
+                language=language,
+                task="transcribe",
+            )
+            pred_ids = self.model.generate(
+                input_features,
+                forced_decoder_ids=forced_decoder_ids,
+            )
+
+        # Decode prediction
+        transcription_text = self.processor.batch_decode(
+            pred_ids,
+            skip_special_tokens=True,
+        )[0]
+
+        # Create compatible output format
+        # For simplicity, create a single segment ( WhisperX will refine)
+        audio_duration = len(audio) / 16000
+
+        result = {
+            "segments": [
+                {
+                    "start": 0.0,
+                    "end": audio_duration,
+                    "text": transcription_text.strip(),
+                }
+            ],
+            "language": language,
+        }
+
+        return result
 
 
 def _import_whisperx():
@@ -211,16 +303,52 @@ class WhisperXPipeline:
         return False
 
     def _load_whisper_model(self) -> None:
-        """Load Whisper model."""
+        """
+        Load Whisper model.
+
+        Supports Distil-Whisper for 4-6x faster transcription with 99% accuracy.
+        """
         wx = _import_whisperx()
 
         logger.info(f"Loading Whisper model: {self.model_size}")
-        self._whisper_model = wx.load_model(
-            self.model_size,
-            device=self.device,
-            compute_type=self.config.compute_type,
-            language=self.language,
-        )
+
+        # Handle Distil-Whisper model
+        if self.model_size.startswith("distil-"):
+            # Distil-Whisper models use HuggingFace transformers
+            from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
+            import torch
+
+            model_name = f"distil-whisper/{self.model_size}"
+
+            logger.info(f"Loading Distil-Whisper model from: {model_name}")
+
+            # Load model
+            model = AutoModelForSpeechSeq2Seq.from_pretrained(
+                model_name,
+                torch_dtype=torch.float16
+                if self.config.compute_type == "float16"
+                else torch.float32,
+                low_cpu_mem_usage=True,
+                use_safetensors=True,
+            )
+
+            # Load processor
+            processor = AutoProcessor.from_pretrained(model_name)
+
+            # Move to device
+            if self.device == "cuda" and torch.cuda.is_available():
+                model.to(torch.device(self.device))
+
+            # Wrap in compatible format for whisperx
+            self._whisper_model = _DistilWhisperWrapper(model, processor, self.language)
+        else:
+            # Standard Whisper model loading
+            self._whisper_model = wx.load_model(
+                self.model_size,
+                device=self.device,
+                compute_type=self.config.compute_type,
+                language=self.language,
+            )
 
     def _load_align_model(self) -> None:
         """
@@ -505,6 +633,7 @@ class WhisperXPipeline:
         audio_path: str,
         num_speakers: Optional[int] = None,
         progress_callback: Optional[Callable[[str, float, str], None]] = None,
+        existing_transcription: Optional[Dict[str, Any]] = None,
     ) -> PipelineResult:
         """
         Process audio file through complete pipeline.
@@ -517,6 +646,9 @@ class WhisperXPipeline:
             num_speakers: Number of speakers (None for auto-detection)
             progress_callback: Optional callback for progress updates
                               (stage: str, progress: float, message: str)
+            existing_transcription: Optional existing transcription data to reuse.
+                                  If provided, skips transcription and alignment,
+                                  only performs diarization.
 
         Returns:
             PipelineResult with complete transcription and speaker data
@@ -532,23 +664,31 @@ class WhisperXPipeline:
         report_progress("transcription", 0, f"Loading audio: {audio_path}")
         audio = wx.load_audio(audio_path)
 
-        # Stage 1: Transcription (0-40%)
-        report_progress("transcription", 10, "Starting transcription")
-        transcription = await self._transcribe(audio_path)
-        report_progress("transcription", 40, "Transcription complete")
+        # Check if we can reuse existing transcription
+        if existing_transcription:
+            logger.info("Reusing existing transcription, skipping transcribe/align stages")
+            report_progress("transcription", 40, "Reusing existing transcription")
 
-        # Unload whisper model if sequential loading
-        if self._sequential_loading:
-            self._unload_whisper_model()
+            # Create aligned format from existing data
+            aligned = {"segments": existing_transcription.get("segments", [])}
+        else:
+            # Stage 1: Transcription (0-40%)
+            report_progress("transcription", 10, "Starting transcription")
+            transcription = await self._transcribe(audio_path)
+            report_progress("transcription", 40, "Transcription complete")
 
-        # Stage 2: Alignment (40-70%)
-        report_progress("alignment", 40, "Starting alignment")
-        aligned = await self._align(transcription, audio)
-        report_progress("alignment", 70, "Alignment complete")
+            # Unload whisper model if sequential loading
+            if self._sequential_loading:
+                self._unload_whisper_model()
 
-        # Unload alignment model if sequential loading
-        if self._sequential_loading:
-            self._unload_align_model()
+            # Stage 2: Alignment (40-70%)
+            report_progress("alignment", 40, "Starting alignment")
+            aligned = await self._align(transcription, audio)
+            report_progress("alignment", 70, "Alignment complete")
+
+            # Unload alignment model if sequential loading
+            if self._sequential_loading:
+                self._unload_align_model()
 
         # Stage 3: Diarization (70-100%)
         report_progress("diarization", 70, "Starting diarization")
