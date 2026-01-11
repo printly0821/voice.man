@@ -17,12 +17,44 @@ SPEC-E2ETEST-001 Requirements:
 - N3: Original file modification prohibited
 """
 
+# ============================================================================
+# PyTorch 2.6+ Compatibility Patch for weights_only
+# Required for pyannote-audio model loading with newer PyTorch versions
+# ============================================================================
+import lightning_fabric.utilities.cloud_io as _cloud_io
+
+_original_pl_load = _cloud_io._load
+
+
+def _patched_pl_load(path_or_url, map_location=None, weights_only=None):
+    """Patched _load to default weights_only=False for backward compatibility."""
+    if weights_only is None:
+        weights_only = False
+    return _original_pl_load(path_or_url, map_location, weights_only)
+
+
+_cloud_io._load = _patched_pl_load
+
+# Also patch the import reference in pyannote.audio.core.model
+try:
+    import pyannote.audio.core.model as _pyannote_model
+
+    _pyannote_model.pl_load = _patched_pl_load
+except ImportError:
+    pass
+# ============================================================================
+
 import argparse
 import asyncio
 import logging
 import sys
 from datetime import datetime
 from pathlib import Path
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -135,6 +167,14 @@ Examples:
         choices=["float16", "float32", "int8"],
         default="float16",
         help="Compute type for inference (default: float16)",
+    )
+
+    parser.add_argument(
+        "--model",
+        type=str,
+        choices=["tiny", "base", "small", "medium", "large-v2", "large-v3"],
+        default="large-v3",
+        help="Whisper model size (default: large-v3). Smaller models are faster but less accurate.",
     )
 
     parser.add_argument(
@@ -295,9 +335,9 @@ async def main() -> int:
             from voice_man.services.gpu_monitor_service import GPUMonitorService
             from voice_man.services.memory_service import MemoryManager
 
-            logger.info("Initializing WhisperX service...")
+            logger.info(f"Initializing WhisperX service with model: {args.model}...")
             whisperx_service = WhisperXService(
-                model_size="large-v3",
+                model_size=args.model,
                 device=config.device,
                 language=config.language,
                 compute_type=config.compute_type,

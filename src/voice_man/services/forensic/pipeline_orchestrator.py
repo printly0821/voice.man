@@ -165,6 +165,9 @@ class PipelineOrchestrator:
                     # Process audio through STT
                     result = await self._stt_service.process_audio(str(file_path))
 
+                    # Yield control to consumer (prevent event loop blocking)
+                    await asyncio.sleep(0)
+
                     # Extract transcript text
                     transcript = getattr(result, "text", "")
                     if not transcript and hasattr(result, "segments"):

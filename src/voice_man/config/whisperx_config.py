@@ -185,7 +185,7 @@ class WhisperXConfig:
         Raises:
             ValueError: If configuration is invalid
         """
-        if self.model_size not in [
+        valid_models = [
             "tiny",
             "base",
             "small",
@@ -193,8 +193,12 @@ class WhisperXConfig:
             "large-v1",
             "large-v2",
             "large-v3",
-        ]:
-            raise ValueError(f"Invalid model_size: {self.model_size}")
+            "distil-large-v3",  # Distil-Whisper: 4-6x faster, 99% of large-v3 accuracy
+        ]
+        if self.model_size not in valid_models:
+            raise ValueError(
+                f"Invalid model_size: {self.model_size}. Valid options: {valid_models}"
+            )
 
         if self.device not in ["cuda", "cpu", "auto"]:
             raise ValueError(f"Invalid device: {self.device}")

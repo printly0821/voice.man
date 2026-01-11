@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-01-10T10:16:38.626416",
+  "input_dir": "ref/call/single_test",
+  "total_files": 1,
+  "processed": 1,
+  "success": 0,
+  "failed": 1,
+  "success_rate": "0.0%",
+  "total_time_seconds": 103.39,
+  "avg_time_per_file": 103.39,
+  "results": [
+    {
+      "file": "통화 녹음 신기연_250723_211739.m4a",
+      "status": "failed",
+      "error": "'NoneType' object has no attribute 'stress_indicator'"
+    }
+  ]
+}

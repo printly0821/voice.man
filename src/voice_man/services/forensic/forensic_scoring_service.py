@@ -1,17 +1,23 @@
 """
 Forensic Scoring Service
 SPEC-FORENSIC-001 Phase 2-D: Integrated forensic scoring system
+SPEC-PERFOPT-001 Phase 4: Performance optimization with parallel processing
 
 This service combines all forensic analysis results (audio features, crime language,
 emotion recognition, cross-validation) into a comprehensive risk assessment.
 """
 
+import logging
+import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import librosa
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 from voice_man.models.forensic.audio_features import StressFeatures
 from voice_man.models.forensic.crime_language import (
@@ -88,6 +94,8 @@ class ForensicScoringService:
         crime_language_service,
         ser_service,
         cross_validation_service,
+        skip_ser: bool = False,
+        skip_audio_features: bool = False,
     ):
         """
         Initialize the ForensicScoringService.
@@ -98,12 +106,77 @@ class ForensicScoringService:
             crime_language_service: Service for crime language pattern detection.
             ser_service: Service for speech emotion recognition.
             cross_validation_service: Service for text-voice cross-validation.
+            skip_ser: If True, skip SER analysis for faster processing (SPEC-PERFOPT-001).
+            skip_audio_features: If True, skip audio feature analysis for faster processing.
         """
         self._audio_feature_service = audio_feature_service
         self._stress_analysis_service = stress_analysis_service
         self._crime_language_service = crime_language_service
         self._ser_service = ser_service
         self._cross_validation_service = cross_validation_service
+        self._skip_ser = skip_ser
+        self._skip_audio_features = skip_audio_features
+
+    def _create_placeholder_audio_features(self, file_path: str, duration: float, sr: int):
+        """
+        Create placeholder audio features when audio analysis is skipped.
+
+        SPEC-PERFOPT-001: Provides neutral/default values for audio features
+        when skip_audio_features is enabled for faster processing.
+
+        Args:
+            file_path: Path to the audio file.
+            duration: Audio duration in seconds.
+            sr: Sample rate in Hz.
+
+        Returns:
+            AudioFeatureAnalysis with placeholder values.
+        """
+        from voice_man.models.forensic.audio_features import (
+            AudioFeatureAnalysis,
+            VolumeFeatures,
+            PitchFeatures,
+            SpeechRateFeatures,
+            StressFeatures,
+        )
+
+        return AudioFeatureAnalysis(
+            file_path=file_path,
+            duration_seconds=duration,
+            sample_rate=sr,
+            volume_features=VolumeFeatures(
+                rms_amplitude=0.1,
+                rms_db=-20.0,
+                peak_amplitude=0.3,
+                peak_db=-10.0,
+                dynamic_range_db=10.0,
+                volume_change_rate_db_per_sec=0.5,
+            ),
+            pitch_features=PitchFeatures(
+                f0_mean_hz=150.0,  # Neutral pitch
+                f0_std_hz=20.0,
+                f0_min_hz=100.0,
+                f0_max_hz=200.0,
+                f0_range_semitones=12.0,
+                jitter_percent=1.0,  # Low jitter (normal)
+            ),
+            speech_rate_features=SpeechRateFeatures(
+                words_per_minute=150.0,  # Average speaking rate
+                speech_ratio=0.7,
+                silence_ratio=0.3,
+                pause_count=10,
+                average_pause_duration=0.5,
+                pauses=[],
+            ),
+            stress_features=StressFeatures(
+                shimmer_percent=3.0,  # Normal shimmer
+                hnr_db=20.0,  # Good HNR
+                formant_stability_score=80.0,  # Stable formants
+                stress_index=20.0,  # Low stress
+                risk_level="low",
+            ),
+            escalation_zones=[],
+        )
 
     def _map_score_to_risk_level(self, score: float) -> RiskLevel:
         """
@@ -566,14 +639,18 @@ class ForensicScoringService:
         transcript: str,
     ) -> ForensicScoreResult:
         """
-        Perform complete forensic analysis.
+        Perform complete forensic analysis with parallel processing optimization.
 
-        Analysis pipeline:
-            1. Audio feature analysis (Phase 1)
-            2. Crime language analysis (Phase 2-A)
-            3. SER emotion analysis (Phase 2-B)
-            4. Cross-validation (Phase 2-C)
-            5. Comprehensive scoring (Phase 2-D)
+        SPEC-PERFOPT-001 Phase 4: Optimized pipeline with:
+            - Single audio load (no duplicate loading)
+            - Parallel execution of independent analyses
+            - SER result reuse (passed to cross-validation, eliminating duplicate SER)
+
+        Analysis pipeline (optimized):
+            1. Load audio once
+            2. Parallel: [Audio features, Crime language, SER emotion]
+            3. Sequential (depends on above): Stress analysis, Cross-validation
+            4. Comprehensive scoring (Phase 2-D)
 
         Args:
             audio_path: Path to the audio file.
@@ -582,35 +659,150 @@ class ForensicScoringService:
         Returns:
             ForensicScoreResult with complete analysis.
         """
+        start_time = time.time()
 
         # Generate analysis ID
         analysis_id = str(uuid.uuid4())[:8]
         analyzed_at = datetime.now()
 
-        # Load audio
+        # ===== Phase 0: Load audio ONCE (eliminates duplicate loading) =====
+        load_start = time.time()
         audio, sr = librosa.load(audio_path, sr=None)
         audio_duration = len(audio) / sr
+        logger.debug(f"Audio loaded in {time.time() - load_start:.2f}s")
 
-        # Phase 1: Audio feature analysis
-        audio_features = self._audio_feature_service.analyze_audio_features(audio, sr, audio_path)
+        # ===== Phase 1: Parallel execution of independent analyses =====
+        # These can run concurrently as they don't depend on each other
+        parallel_start = time.time()
 
-        # Phase 1: Stress analysis
-        stress_result = self._stress_analysis_service.analyze_stress(
-            audio, sr, jitter_percent=audio_features.pitch_features.jitter_percent
-        )
+        # Define tasks for parallel execution
+        def task_audio_features():
+            return self._audio_feature_service.analyze_audio_features(audio, sr, audio_path)
 
-        # Phase 2-A: Crime language analysis
-        crime_analysis = self._crime_language_service.analyze_comprehensive(transcript)
-        gaslighting_matches = self._crime_language_service.detect_gaslighting(transcript)
-        threat_matches = self._crime_language_service.detect_threats(transcript)
-        coercion_matches = self._crime_language_service.detect_coercion(transcript)
+        def task_crime_language():
+            crime_analysis = self._crime_language_service.analyze_comprehensive(transcript)
+            gaslighting_matches = self._crime_language_service.detect_gaslighting(transcript)
+            threat_matches = self._crime_language_service.detect_threats(transcript)
+            coercion_matches = self._crime_language_service.detect_coercion(transcript)
+            return crime_analysis, gaslighting_matches, threat_matches, coercion_matches
 
-        # Phase 2-B: SER emotion analysis
-        emotion_result = self._ser_service.analyze_ensemble(audio, sr)
-        forensic_indicators = self._ser_service.get_forensic_emotion_indicators(emotion_result)
+        def task_ser_analysis():
+            emotion_result = self._ser_service.analyze_ensemble(audio, sr)
+            forensic_indicators = self._ser_service.get_forensic_emotion_indicators(emotion_result)
+            return emotion_result, forensic_indicators
 
-        # Phase 2-C: Cross-validation
-        cross_validation = self._cross_validation_service.cross_validate(transcript, audio_path)
+        # SPEC-PERFOPT-001: Skip Modes for faster processing
+        # Determine which analyses to run
+        skip_ser = self._skip_ser
+        skip_audio = self._skip_audio_features
+
+        if skip_ser and skip_audio:
+            # Text-only mode: Run only crime language analysis (fastest)
+            logger.info("Text-Only Mode enabled - skipping SER and Audio Feature analysis")
+            crime_analysis, gaslighting_matches, threat_matches, coercion_matches = (
+                task_crime_language()
+            )
+            audio_features = self._create_placeholder_audio_features(audio_path, audio_duration, sr)
+            emotion_result = None
+            forensic_indicators = None
+
+        elif skip_ser:
+            # SER Skip Mode: Run audio features + crime language (no SER)
+            logger.info("SER Skip Mode enabled - skipping emotion recognition analysis")
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future_audio = executor.submit(task_audio_features)
+                future_crime = executor.submit(task_crime_language)
+
+                audio_features = future_audio.result()
+                crime_analysis, gaslighting_matches, threat_matches, coercion_matches = (
+                    future_crime.result()
+                )
+            emotion_result = None
+            forensic_indicators = None
+
+        elif skip_audio:
+            # Audio Skip Mode: Run SER + crime language (no audio features)
+            logger.info("Audio Feature Skip Mode enabled - skipping audio feature analysis")
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future_crime = executor.submit(task_crime_language)
+                future_ser = executor.submit(task_ser_analysis)
+
+                crime_analysis, gaslighting_matches, threat_matches, coercion_matches = (
+                    future_crime.result()
+                )
+                emotion_result, forensic_indicators = future_ser.result()
+            audio_features = self._create_placeholder_audio_features(audio_path, audio_duration, sr)
+
+        else:
+            # Full analysis: Execute all three analyses in parallel
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                future_audio = executor.submit(task_audio_features)
+                future_crime = executor.submit(task_crime_language)
+                future_ser = executor.submit(task_ser_analysis)
+
+                # Collect results
+                audio_features = future_audio.result()
+                crime_analysis, gaslighting_matches, threat_matches, coercion_matches = (
+                    future_crime.result()
+                )
+                emotion_result, forensic_indicators = future_ser.result()
+
+        logger.debug(f"Parallel analyses completed in {time.time() - parallel_start:.2f}s")
+
+        # ===== Phase 2: Sequential analyses (depend on Phase 1 results) =====
+        seq_start = time.time()
+
+        # Stress analysis (needs audio_features.pitch_features.jitter_percent)
+        # Skip stress analysis if audio features are skipped (use placeholder value)
+        if self._skip_audio_features:
+            # Use placeholder stress result from audio_features
+            stress_result = audio_features.stress_features
+        else:
+            stress_result = self._stress_analysis_service.analyze_stress(
+                audio, sr, jitter_percent=audio_features.pitch_features.jitter_percent
+            )
+
+        # SPEC-PERFOPT-001: SER Skip Mode - skip cross-validation when SER is disabled
+        if self._skip_ser:
+            # Create minimal cross-validation result when SER is skipped
+            from voice_man.models.forensic.cross_validation import (
+                CrossValidationResult,
+                DiscrepancySeverity,
+                TextAnalysisResult,
+                VoiceAnalysisResult,
+            )
+
+            cross_validation = CrossValidationResult(
+                text_analysis=TextAnalysisResult(
+                    text=transcript[:100] if transcript else "N/A",  # Truncated for placeholder
+                    detected_sentiment="neutral",
+                    sentiment_score=0.0,
+                    detected_emotions=[],
+                    crime_patterns_found=[],
+                    intensity_level=0.3,
+                ),
+                voice_analysis=VoiceAnalysisResult(
+                    dominant_emotion="neutral",
+                    emotion_confidence=0.0,
+                    arousal=0.5,
+                    valence=0.5,
+                    stress_level=0.2,
+                ),
+                discrepancies=[],
+                overall_consistency_score=0.8,
+                deception_probability=0.1,
+                risk_level=DiscrepancySeverity.LOW,
+                analysis_notes=["SER Skip Mode - minimal cross-validation"],
+            )
+            logger.info("SER Skip Mode - using minimal cross-validation result")
+        else:
+            # Cross-validation with PRECOMPUTED emotion_result (eliminates duplicate SER!)
+            # SPEC-PERFOPT-001: Pass emotion_result to avoid re-running SER analysis
+            cross_validation = self._cross_validation_service.cross_validate(
+                transcript, audio_path, precomputed_emotion_result=emotion_result
+            )
+
+        logger.debug(f"Sequential analyses completed in {time.time() - seq_start:.2f}s")
 
         # Phase 2-D: Calculate individual scores
         gaslighting_analysis = self.calculate_gaslighting_score(crime_analysis, cross_validation)
@@ -702,8 +894,15 @@ class ForensicScoringService:
             flags.append("THREAT_DETECTED")
         if deception_analysis.deception_probability >= 0.6:
             flags.append("DECEPTION_INDICATOR")
-        if forensic_indicators.stress_indicator:
+        if forensic_indicators and forensic_indicators.stress_indicator:
             flags.append("HIGH_STRESS")
+
+        # SPEC-PERFOPT-001: Log total analysis time
+        total_time = time.time() - start_time
+        logger.info(
+            f"Forensic analysis completed in {total_time:.2f}s "
+            f"(audio: {audio_duration:.1f}s, risk: {risk_level.value})"
+        )
 
         return ForensicScoreResult(
             analysis_id=analysis_id,
