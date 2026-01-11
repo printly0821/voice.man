@@ -1,0 +1,42 @@
+# KoBERT NLP Analysis Configuration
+# SPEC-NLP-KOBERT-001
+
+model:
+  name: "skt/kobert-base-v1"
+  fine_tuned_path: null  # Path to custom fine-tuned model
+  device: "auto"  # auto, cuda, cpu
+
+inference:
+  batch_size: 8
+  max_length: 128
+  confidence_threshold: 0.7
+
+hybrid:
+  ml_weight: 0.7
+  keyword_weight: 0.3
+  fallback_enabled: true
+
+performance:
+  max_gpu_memory_mb: 4096
+  inference_timeout_ms: 100
+
+emotion_classification:
+  emotions:
+    - happiness
+    - sadness
+    - anger
+    - fear
+    - disgust
+    - surprise
+    - neutral
+
+cultural_analysis:
+  speech_levels:
+    - formal  # 존댓말 (합쇼체, 해요체)
+    - informal  # 반말 (해체, 해라체)
+    - mixed  # 혼용
+
+  hierarchy_markers:
+    - job_titles  # 직책 (부장님, 사장님)
+    - kinship  # 친족 (할머니, 아버지)
+    - social  # 사회적 (선생님, 고객님)
