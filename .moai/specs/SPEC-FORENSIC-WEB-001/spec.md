@@ -1,9 +1,9 @@
 ---
 id: SPEC-FORENSIC-WEB-001
-version: "1.0.0"
-status: "planned"
+version: "1.1.0"
+status: "in-progress"
 created: "2026-01-10"
-updated: "2026-01-10"
+updated: "2026-01-11"
 author: "지니"
 priority: "HIGH"
 title: "웹 기반 포렌식 증거 프레젠테이션 시스템"
@@ -28,6 +28,47 @@ lifecycle: "spec-anchored"
 | 버전 | 날짜 | 작성자 | 변경 내용 |
 |------|------|--------|-----------|
 | 1.0.0 | 2026-01-10 | 지니 | 초안 작성 - 웹 기반 포렌식 증거 프레젠테이션 시스템 요구사항 정의 |
+| 1.1.0 | 2026-01-11 | 지니 | 상태 업데이트 - in-progress, 구현 상태 섹션 추가 |
+
+---
+
+## 구현 상태 (Implementation Status)
+
+### 완료된 항목
+
+#### Phase 1.1: 백엔드 인증 시스템
+- [x] ULID 유틸리티 모듈 구현 (`src/voice_man/web/security/ulid_utils.py`)
+  - Crockford Base32 인코딩 ULID 생성
+  - 시간순 정렬 가능한 128-bit 식별자
+  - 타임스탬프 변환 기능
+
+### 진행 중인 항목
+
+#### Phase 1.1: 백엔드 인증 시스템 (계속)
+- [ ] JWT 인증 모듈 구현 (`src/voice_man/security/jwt.py`)
+- [ ] 사용자 모델 및 RBAC 구현 (`src/voice_man/models/web/user.py`)
+- [ ] 로그인/로그아웃 API (`src/voice_man/api/web/auth.py`)
+- [ ] 감사 로그 미들웨어 (`src/voice_man/api/middleware/audit.py`)
+
+### 추가된 서비스 모듈
+
+#### NLP 서비스 (SPEC-NLP-KOBERT-001)
+- **KoBERT 모델 래퍼** (`src/voice_man/services/nlp/kobert_model.py`)
+  - GPU/CPU 자동 감지
+  - 싱글톤 패턴으로 효율적 리소스 관리
+  - 배치 처리 지원
+  - GPU 메모리 모니터링
+
+#### EdgeXpert 통합 (SPEC-EDGEXPERT-001)
+- **GPU 최적화 서비스** (`src/voice_man/services/edgexpert/`)
+  - `UnifiedMemoryManager`: 통합 메모리 관리
+  - `CUDAStreamProcessor`: CUDA 스트림 처리
+  - `HardwareAcceleratedCodec`: 하드웨어 가속 코덱
+  - `BlackWellOptimizer`: Blackwell 아키텍처 최적화
+  - `ARMCPUPipeline`: ARM CPU 파이프라인
+  - `ThermalManager`: 열 관리
+
+---
 
 ---
 

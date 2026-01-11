@@ -28,6 +28,57 @@ Voice Man은 음성 녹취 파일을 텍스트로 변환하고, 법적 증거로
 - **Word-level 타임스탬프**: WAV2VEC2 기반 100ms 이내 정확도
 - **오디오 포맷 자동 변환**: m4a/mp3/wav/flac/ogg -> 16kHz mono WAV
 
+## 신규 서비스 모듈
+
+### 포렌식 웹 인터페이스 (SPEC-FORENSIC-WEB-001) - 진행 중
+
+웹 기반 포렌식 증거 프레젠테이션 시스템을 개발 중입니다.
+
+**현재 진행 상황**:
+- ULID 유틸리티 모듈 구현 완료
+- 백엔드 인증 시스템 개발 중
+- Next.js 16 + FastAPI 기반 웹 인터페이스 예정
+
+**계획된 기능**:
+- 인터랙티브 고소장 뷰어
+- 포렌식 분석 탐색기
+- 증거 비교 대시보드
+- 보안 및 접근 제어 (JWT + RBAC)
+
+### NLP 서비스 (KoBERT 기반 한국어 텍스트 분석)
+
+**KoBERT 모델 래퍼** (`src/voice_man/services/nlp/`):
+- GPU/CPU 자동 감지 및 장치 전환
+- 싱글톤 패턴으로 효율적 리소스 관리
+- 배치 처리 지원
+- GPU 메모리 모니터링
+- 한국어 BERT 임베딩 추출
+
+```python
+from voice_man.services.nlp.kobert_model import KoBERTModel
+
+# 모델 초기화 (자동 GPU 감지)
+model = KoBERTModel(device="auto")
+
+# 텍스트 임베딩 추출
+embeddings = model.get_embeddings("한국어 텍스트 분석")
+
+# 배치 처리
+results = model.encode_batch(["텍스트 1", "텍스트 2", "텍스트 3"])
+```
+
+### EdgeXpert 통합 (IoT 장치 데이터 연동)
+
+MSI EdgeXpert (NVIDIA Grace Blackwell) 환경 최적화 서비스입니다.
+
+**GPU 최적화 서비스** (`src/voice_man/services/edgexpert/`):
+- `UnifiedMemoryManager`: 통합 메모리 관리
+- `CUDAStreamProcessor`: CUDA 스트림 병렬 처리
+- `HardwareAcceleratedCodec`: 하드웨어 가加速 코덱
+- `BlackWellOptimizer`: Blackwell 아키텍처 최적화
+- `ARMCPUPipeline`: ARM CPU 네이티브 파이프라인
+- `ThermalManager`: 열 관리 및 전력 최적화
+
 ## 시스템 아키텍처
 
 ### 전체 파이프라인 (4단계 포렌식 분석)

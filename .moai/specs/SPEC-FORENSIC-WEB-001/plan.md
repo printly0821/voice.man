@@ -16,15 +16,35 @@ priority: "HIGH"
 
 ---
 
+## 진행 상황 (2026-01-11 기준)
+
+### 완료된 작업
+- [x] ULID 유틸리티 모듈 구현
+- [x] NLP 서비스 (KoBERT) 추가
+- [x] EdgeXpert 통합 모듈 추가
+
+### 현재 작업
+- [ ] JWT 인증 시스템 구현
+- [ ] 사용자 모델 및 RBAC
+
+### 전체 진행률: 15% (Phase 1 진행 중)
+
+---
+
 ## 마일스톤
 
 ### 1차 목표 (Primary Goal): 핵심 인프라 구축
 
-#### Phase 1.1: 백엔드 인증 시스템
-- JWT 인증 모듈 구현 (`src/voice_man/security/jwt.py`)
-- 사용자 모델 및 RBAC 구현 (`src/voice_man/models/web/user.py`)
-- 로그인/로그아웃 API (`src/voice_man/api/web/auth.py`)
-- 감사 로그 미들웨어 (`src/voice_man/api/middleware/audit.py`)
+#### Phase 1.1: 백엔드 인증 시스템 (진행률: 25%)
+- [x] ULID 유틸리티 구현 (`src/voice_man/web/security/ulid_utils.py`)
+- [ ] JWT 인증 모듈 구현 (`src/voice_man/security/jwt.py`)
+- [ ] 사용자 모델 및 RBAC 구현 (`src/voice_man/models/web/user.py`)
+- [ ] 로그인/로그아웃 API (`src/voice_man/api/web/auth.py`)
+- [ ] 감사 로그 미들웨어 (`src/voice_man/api/middleware/audit.py`)
+
+**추가 완료**:
+- [x] NLP 서비스 KoBERT 모델 래퍼 (`src/voice_man/services/nlp/`)
+- [x] EdgeXpert GPU 최적화 서비스 (`src/voice_man/services/edgexpert/`)
 
 #### Phase 1.2: 프론트엔드 인증
 - Next.js 16 프로젝트 초기 설정 (`frontend/`)
