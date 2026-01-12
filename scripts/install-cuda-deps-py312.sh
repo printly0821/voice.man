@@ -86,10 +86,10 @@ nvidia-smi --query-gpu=name,driver_version,compute_cap --format=csv
 echo -e "${YELLOW}CUDA Driver Version: $(nvidia-smi | grep 'CUDA Version' | awk '{print $9}')${NC}"
 
 # Version configuration
-CUDA_WHEEL_VERSION="cu129"
-TORCH_VERSION="2.8.0"
-TORCHAUDIO_VERSION="2.8.0"
-TORCHVISION_VERSION="0.23.0"
+CUDA_WHEEL_VERSION="cu124"
+TORCH_VERSION="2.5.1"
+TORCHAUDIO_VERSION="2.5.1"
+TORCHVISION_VERSION="0.20.1"
 
 echo -e "${GREEN}Target versions:${NC}"
 echo -e "  torch: ${TORCH_VERSION}+${CUDA_WHEEL_VERSION}"

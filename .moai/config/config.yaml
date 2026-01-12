@@ -1,5 +1,5 @@
 moai:
-  version: 0.41.2
+  version: 1.0.0
   initialized: true
   initialized_at: '2025-12-19T00:00:00Z'
 document_management:
@@ -37,4 +37,4 @@ project:
   optimized: false
   language: '{''conversation_language'': ''ko'', ''conversation_language_name'': ''Korean'',
     ''agent_prompt_language'': ''ko''}'
-  template_version: 0.41.2
+  template_version: 1.0.0

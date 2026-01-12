@@ -15,6 +15,11 @@ Voice Man은 음성 녹취 파일을 텍스트로 변환하고, 법적 증거로
 - **faster-whisper 기반 STT**: GPU 가속 음성-텍스트 변환 (WER < 10%)
 - **pyannote-audio 화자 분리**: 자동 화자 구분 및 레이블링 (DER < 15%)
 - **범죄 발언 자동 태깅**: 협박, 공갈, 사기, 모욕 유형 자동 감지
+- **범죄 유형 분류 시스템**: 11개 형법 죄명으로 멀티모달 분류 (98% 테스트 커버리지)
+  - 사기, 공갈, 강압, 위협, 모욕, 명예훼손, 업무상위계등, 감금, 체포감금, 특수공무원감금, 살인(준비)
+  - Dark Triad 심리 프로파일링 (나르시시즘, 마키아벨리즘, 사이코패시)
+  - 95% 신뢰구간 계산 (Bootstrap 방식)
+  - 한국 형법 요구사항 매핑
 - **심리 분석**: 가스라이팅 패턴 및 감정 분석
 - **음성 포렌식 분석**: 음량/피치/말속도 분석, 스트레스 지표 추출, 감정 격화 구간 감지
 - **법적 증거 보고서 생성**: PDF 형식의 종합 보고서
@@ -22,6 +27,104 @@ Voice Man은 음성 녹취 파일을 텍스트로 변환하고, 법적 증거로
 - **WhisperX 통합 파이프라인**: STT + 타임스탬프 정렬 + 화자분리 end-to-end GPU 처리
 - **Word-level 타임스탬프**: WAV2VEC2 기반 100ms 이내 정확도
 - **오디오 포맷 자동 변환**: m4a/mp3/wav/flac/ogg -> 16kHz mono WAV
+
+## 신규 서비스 모듈
+
+### 포렌식 웹 인터페이스 (SPEC-FORENSIC-WEB-001) - 진행 중
+
+웹 기반 포렌식 증거 프레젠테이션 시스템을 개발 중입니다.
+
+**현재 진행 상황**:
+- ULID 유틸리티 모듈 구현 완료
+- 백엔드 인증 시스템 개발 중
+- Next.js 16 + FastAPI 기반 웹 인터페이스 예정
+
+**계획된 기능**:
+- 인터랙티브 고소장 뷰어
+- 포렌식 분석 탐색기
+- 증거 비교 대시보드
+- 보안 및 접근 제어 (JWT + RBAC)
+
+### NLP 서비스 (KoBERT 기반 한국어 텍스트 분석) - 완료
+
+**SPEC-NLP-KOBERT-001** 구현 완료 (2026-01-11)
+
+**KoBERT 모델 래퍼** (`src/voice_man/services/nlp/kobert_model.py`):
+- GPU/CPU 자동 감지 및 장치 전환
+- 싱글톤 패턴으로 효율적 리소스 관리
+- 배치 처리 지원
+- GPU 메모리 모니터링
+- 한국어 BERT 임베딩 추출
+
+```python
+from voice_man.services.nlp.kobert_model import KoBERTModel
+
+# 모델 초기화 (자동 GPU 감지)
+model = KoBERTModel(device="auto")
+
+# 텍스트 임베딩 추출
+embeddings = model.get_embeddings("한국어 텍스트 분석")
+
+# 배치 처리
+results = model.encode_batch(["텍스트 1", "텍스트 2", "텍스트 3"])
+```
+
+**감정 분류기** (`src/voice_man/services/nlp/emotion_classifier.py`):
+- 7개 감정 카테고리 분류 (행복, 슬픔, 분노, 공포, 혐오, 놀람, 중립)
+- 신뢰도 점수 계산
+- 불확실성 플래그
+- 배치 처리 지원
+
+```python
+from voice_man.services.nlp.emotion_classifier import KoBERTEmotionClassifier
+
+classifier = KoBERTEmotionClassifier()
+result = classifier.classify("오늘 정말 기뻐요")
+print(result.primary_emotion)  # 'happiness'
+print(result.confidence)       # 0.85
+```
+
+**한국어 문화적 맥락 분석기** (`src/voice_man/services/nlp/cultural_analyzer.py`):
+- 존댓말/반말 분석 (합쇼체, 해요체, 해체, 해라체)
+- 위계 관계 패턴 탐지 (가족, 직장, 사회적 관계 마커)
+- 한국어 특유 조작 표현 패턴 탐지 (가스라이팅, 위협, 강압)
+
+```python
+from voice_man.services.nlp.cultural_analyzer import KoreanCulturalAnalyzer
+
+analyzer = KoreanCulturalAnalyzer()
+
+# 존댓말/반말 분석
+speech = analyzer.analyze_speech_level("안녕하세요? 오늘 날씨 좋네요.")
+print(speech.level)  # 'formal'
+
+# 위계 관계 탐지
+hierarchy = analyzer.detect_hierarchy_context("어머니, 오늘 밥 드셨어요?")
+print(hierarchy.has_family_markers)  # True
+
+# 조작 패턴 탐지
+patterns = analyzer.detect_manipulation_patterns("네가 잘못했으니까 그래")
+print(len(patterns))  # 1
+print(patterns[0].category)  # 'gaslighting'
+```
+
+**구현 현황**:
+- 45/45 테스트 통과 (100%)
+- 69% 코드 커버리지
+- 1,009줄 코드 구현
+- 문서화 완료 (NLP_ARCHITECTURE.md, KOBERT_INTEGRATION_GUIDE.md, EMOTION_ANALYSIS_API.md, CULTURAL_CONTEXT_ANALYSIS.md)
+
+### EdgeXpert 통합 (IoT 장치 데이터 연동)
+
+MSI EdgeXpert (NVIDIA Grace Blackwell) 환경 최적화 서비스입니다.
+
+**GPU 최적화 서비스** (`src/voice_man/services/edgexpert/`):
+- `UnifiedMemoryManager`: 통합 메모리 관리
+- `CUDAStreamProcessor`: CUDA 스트림 병렬 처리
+- `HardwareAcceleratedCodec`: 하드웨어 가加速 코덱
+- `BlackWellOptimizer`: Blackwell 아키텍처 최적화
+- `ARMCPUPipeline`: ARM CPU 네이티브 파이프라인
+- `ThermalManager`: 열 관리 및 전력 최적화
 
 ## 시스템 아키텍처
 
@@ -288,6 +391,13 @@ flowchart TB
 - **CUDA 12.1+**: NVIDIA GPU 가속
 - **pynvml**: GPU 메모리 모니터링
 - **psutil**: 시스템 리소스 모니터링
+
+### NLP 서비스 (KoBERT)
+- **transformers 4.48+**: HuggingFace Transformers (KoBERT 모델 지원)
+- **torch 2.0+**: PyTorch (GPU/CPU 자동 지원)
+- **KoBERT (skt/kobert-base-v1)**: 한국어 BERT 모델
+- **감정 분류**: 7개 감정 카테고리 (행복, 슬픔, 분노, 공포, 혐오, 놀람, 중립)
+- **문화적 맥락 분석**: 존댓말/반말, 위계 관계, 조작 패턴 탐지
 
 ### 데이터베이스
 - **SQLite**: 개발 환경
@@ -930,6 +1040,9 @@ voice.man/
 │       │   ├── diarization.py      # 화자 분리 모델
 │       │   ├── whisper_model.py    # faster-whisper 래퍼 (GPU/CPU 자동 선택)
 │       │   ├── whisperx_pipeline.py    # WhisperX 통합 파이프라인
+│       │   ├── nlp/                    # NLP 데이터 모델
+│       │   │   ├── emotion.py           # 감정 분류 모델
+│       │   │   └── cultural.py          # 문화적 맥락 모델
 │       │   └── forensic/
 │       │       ├── audio_features.py   # 포렌식 오디오 특성 모델
 │       │       ├── crime_language.py   # 범죄 언어 패턴 모델
@@ -937,7 +1050,8 @@ voice.man/
 │       │       ├── cross_validation.py     # 텍스트-음성 교차검증 모델
 │       │       └── forensic_score.py       # 포렌식 스코어링 모델
 │       ├── config/
-│       │   └── whisperx_config.py      # WhisperX 설정 관리
+│       │   ├── whisperx_config.py      # WhisperX 설정 관리
+│       │   └── kobert_config.yaml      # KoBERT 설정
 │       └── services/
 │           ├── __init__.py
 │           ├── diarization_service.py      # 화자 분리 서비스
@@ -950,6 +1064,10 @@ voice.man/
 │           ├── analysis_pipeline_service.py # 분석 파이프라인 (GPU 통합)
 │           ├── performance_report_service.py # 성능 리포트 생성
 │           ├── e2e_test_service.py           # E2E 테스트 서비스
+│           ├── nlp/                          # NLP 서비스 (SPEC-NLP-KOBERT-001)
+│           │   ├── kobert_model.py           # KoBERT 모델 래퍼
+│           │   ├── emotion_classifier.py     # 감정 분류기
+│           │   └── cultural_analyzer.py      # 문화적 맥락 분석기
 │           └── forensic/
 │               ├── audio_feature_service.py    # 음량/피치/말속도 분석
 │               ├── stress_analysis_service.py  # 스트레스 분석
@@ -1271,6 +1389,7 @@ MIT License
 - [SPEC-E2ETEST-001](.moai/specs/SPEC-E2ETEST-001/spec.md) - E2E 통합 테스트 (GPU 병렬 배치 처리)
 - [SPEC-FORENSIC-001](.moai/specs/SPEC-FORENSIC-001/spec.md) - 범죄 프로파일링 기반 음성 포렌식 분석
 - [SPEC-GPUAUDIO-001](.moai/specs/SPEC-GPUAUDIO-001/spec.md) - GPU 가속 오디오 피처 추출 (torchcrepe, nnAudio)
+- [SPEC-NLP-KOBERT-001](.moai/specs/SPEC-NLP-KOBERT-001/spec.md) - 한국어 NLP 향상을 위한 KoBERT 통합 (완료)
 
 **버전**: 1.4.0
 **상태**: 완료
