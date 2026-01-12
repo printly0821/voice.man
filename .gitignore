@@ -152,6 +152,9 @@ secret-*.*
 .netlify/
 .firebase/
 
+# Credentials directory
+credentials/
+
 # Claude Code Skills Secrets
 .claude/skills/*/.env*
 .claude/skills/*/secrets/
