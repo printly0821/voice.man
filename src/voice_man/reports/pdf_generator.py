@@ -7,10 +7,13 @@ Uses Playwright for accurate HTML-to-PDF conversion with JavaScript rendering
 """
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from voice_man.reports.html_generator import ForensicHTMLGenerator
+
+logger = logging.getLogger(__name__)
 
 
 class ForensicPDFGenerator:
@@ -197,7 +200,7 @@ class ForensicPDFGenerator:
                 result = await self.generate_from_json(str(json_file), str(pdf_path))
                 pdf_paths.append(result)
             except Exception as e:
-                print(f"Warning: Failed to generate PDF for {json_path}: {e}")
+                logger.warning("Failed to generate PDF for %s: %s", json_path, e)
 
         return pdf_paths
 
