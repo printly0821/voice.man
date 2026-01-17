@@ -117,6 +117,14 @@ class ForensicScoringService:
         self._skip_ser = skip_ser
         self._skip_audio_features = skip_audio_features
 
+        # Track cleanup state for idempotency
+        self._cleaned_up = False
+
+        logger.info(
+            f"ForensicScoringService initialized: skip_ser={skip_ser}, "
+            f"skip_audio_features={skip_audio_features}"
+        )
+
     def _create_placeholder_audio_features(self, file_path: str, duration: float, sr: int):
         """
         Create placeholder audio features when audio analysis is skipped.
@@ -920,3 +928,114 @@ class ForensicScoringService:
             recommendations=recommendations,
             flags=flags,
         )
+
+    def cleanup(self) -> None:
+        """
+        Release all resources and clear memory.
+
+        Implements ServiceCleanupProtocol for memory management.
+        This method is idempotent and can be called multiple times safely.
+
+        Actions performed:
+        - Unloads SER models if available
+        - Clears forensic analysis caches
+        - Clears GPU memory cache
+        - Releases references to child services
+        """
+        if self._cleaned_up:
+            logger.debug("ForensicScoringService already cleaned up, skipping")
+            return
+
+        try:
+            logger.info("Starting ForensicScoringService cleanup...")
+
+            # Cleanup SER service (has GPU models)
+            if hasattr(self, "_ser_service") and self._ser_service is not None:
+                if hasattr(self._ser_service, "cleanup"):
+                    self._ser_service.cleanup()
+                    logger.debug("SER service cleaned up")
+
+            # Cleanup cross-validation service
+            if (
+                hasattr(self, "_cross_validation_service")
+                and self._cross_validation_service is not None
+            ):
+                if hasattr(self._cross_validation_service, "cleanup"):
+                    self._cross_validation_service.cleanup()
+                    logger.debug("Cross-validation service cleaned up")
+
+            # Cleanup crime language service
+            if (
+                hasattr(self, "_crime_language_service")
+                and self._crime_language_service is not None
+            ):
+                if hasattr(self._crime_language_service, "cleanup"):
+                    self._crime_language_service.cleanup()
+                    logger.debug("Crime language service cleaned up")
+
+            # Cleanup audio feature service
+            if hasattr(self, "_audio_feature_service") and self._audio_feature_service is not None:
+                if hasattr(self._audio_feature_service, "cleanup"):
+                    self._audio_feature_service.cleanup()
+                    logger.debug("Audio feature service cleaned up")
+
+            # Cleanup stress analysis service
+            if (
+                hasattr(self, "_stress_analysis_service")
+                and self._stress_analysis_service is not None
+            ):
+                if hasattr(self._stress_analysis_service, "cleanup"):
+                    self._stress_analysis_service.cleanup()
+                    logger.debug("Stress analysis service cleaned up")
+
+            # Clear GPU cache
+            try:
+                import gc
+                import torch
+
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    torch.cuda.synchronize()
+                    if hasattr(torch.cuda, "ipc_collect"):
+                        torch.cuda.ipc_collect()
+                    # Force garbage collection to free Python object memory
+                    gc.collect()
+                    logger.debug("GPU cache cleared and GC performed")
+            except ImportError:
+                pass
+            except Exception as e:
+                logger.warning(f"Failed to clear GPU cache: {e}")
+
+            # Clear references to child services
+            self._audio_feature_service = None
+            self._stress_analysis_service = None
+            self._crime_language_service = None
+            self._ser_service = None
+            self._cross_validation_service = None
+
+            # Mark as cleaned up
+            self._cleaned_up = True
+            logger.info("ForensicScoringService cleanup completed")
+
+        except Exception as e:
+            logger.error(f"Error during ForensicScoringService cleanup: {e}")
+            # Still mark as cleaned up to prevent repeated attempts
+            self._cleaned_up = True
+
+    def get_memory_usage(self) -> float:
+        """
+        Get current memory usage in MB.
+
+        Implements ServiceCleanupProtocol for memory monitoring.
+
+        Returns:
+            Memory usage in megabytes
+        """
+        try:
+            import psutil
+
+            process = psutil.Process()
+            return process.memory_info().rss / (1024 * 1024)
+        except Exception as e:
+            logger.warning(f"Failed to get memory usage: {e}")
+            return 0.0

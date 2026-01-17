@@ -296,3 +296,28 @@ ref/call/results/
 test_results.txt
 test_*.py
 !test_forensic_*.py  # Keep test scripts
+# Include tracked directories
+.turbo/
+# Secrets and Credentials (CRITICAL)
+# Claude Code Configuration
+# Build Tools & Frameworks
+# Exclude all .moai/* by default
+!.moai/announcements/
+# Credential patterns in environment files
+# ===========================================
+# Exclude local-only directories
+# Build Artifacts & Distribution
+# Environment files
+# Exclude local development scripts
+!.moai/project/**
+# .moai/ Directory Management
+dist-ssr/
+.nuxt/
+# Skill-specific credentials
+!.moai/announcements/**
+# Deployment & CI/CD
+# Python Cache & Bytecode
+# Updated: 2026-01-10
+# Version: 0.33.0
+# Private keys (specific patterns to avoid false positives)
+!.moai/project/

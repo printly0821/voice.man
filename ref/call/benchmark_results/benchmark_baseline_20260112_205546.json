@@ -1,0 +1,129 @@
+{
+  "mode": "baseline",
+  "num_files": 10,
+  "batch_size": 1,
+  "total_benchmark_time_seconds": 0.3522922992706299,
+  "metrics": {
+    "processing_time": {
+      "total_seconds": 0.0,
+      "avg_per_file_seconds": 0.0,
+      "min_per_file_seconds": Infinity,
+      "max_per_file_seconds": 0.0
+    },
+    "throughput": {
+      "files_per_minute": 0.0,
+      "total_audio_duration_seconds": 0.0,
+      "realtime_factor": 0.0
+    },
+    "accuracy": {
+      "transcription_confidence": 0.0,
+      "speaker_detection_accuracy": 0.0
+    },
+    "gpu_utilization": {
+      "utilization_percent": 0.0,
+      "memory_peak_mb": 0.0
+    },
+    "batch_efficiency": {
+      "batch_count": 0,
+      "avg_batch_size": 0.0,
+      "cache_hit_rate_percent": 0.0
+    },
+    "reliability": {
+      "success_count": 0,
+      "failure_count": 10,
+      "success_rate": 0.0
+    }
+  },
+  "files": [
+    {
+      "file_name": "통화 녹음 신동식(3D개발자)_250926_181835.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.34332704544067383,
+      "success": false,
+      "error_message": "Could not import module 'Pipeline'. Are this object's requirements defined correctly?",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신기연_250620_145742.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0012178421020507812,
+      "success": false,
+      "error_message": "cannot import name 'Pipeline' from 'transformers' (/home/innojini/dev/voice.man/.venv/lib/python3.12/site-packages/transformers/__init__.py)",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신기연_251014_092820.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0009758472442626953,
+      "success": false,
+      "error_message": "cannot import name 'Pipeline' from 'transformers' (/home/innojini/dev/voice.man/.venv/lib/python3.12/site-packages/transformers/__init__.py)",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신동식(3D개발자)_250522_102804.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0010285377502441406,
+      "success": false,
+      "error_message": "cannot import name 'Pipeline' from 'transformers' (/home/innojini/dev/voice.man/.venv/lib/python3.12/site-packages/transformers/__init__.py)",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신기연_251029_213545.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008907318115234375,
+      "success": false,
+      "error_message": "cannot import name 'Pipeline' from 'transformers' (/home/innojini/dev/voice.man/.venv/lib/python3.12/site-packages/transformers/__init__.py)",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신동식(3D개발자)_251210_184229.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008656978607177734,
+      "success": false,
+      "error_message": "cannot import name 'Pipeline' from 'transformers' (/home/innojini/dev/voice.man/.venv/lib/python3.12/site-packages/transformers/__init__.py)",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신기연_250904_093101.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008614063262939453,
+      "success": false,
+      "error_message": "cannot import name 'Pipeline' from 'transformers' (/home/innojini/dev/voice.man/.venv/lib/python3.12/site-packages/transformers/__init__.py)",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신기연_250930_121451.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008537769317626953,
+      "success": false,
+      "error_message": "cannot import name 'Pipeline' from 'transformers' (/home/innojini/dev/voice.man/.venv/lib/python3.12/site-packages/transformers/__init__.py)",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신기연_250611_221328.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008399486541748047,
+      "success": false,
+      "error_message": "cannot import name 'Pipeline' from 'transformers' (/home/innojini/dev/voice.man/.venv/lib/python3.12/site-packages/transformers/__init__.py)",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신동식(3D개발자)_250618_133149.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008463859558105469,
+      "success": false,
+      "error_message": "cannot import name 'Pipeline' from 'transformers' (/home/innojini/dev/voice.man/.venv/lib/python3.12/site-packages/transformers/__init__.py)",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    }
+  ]
+}

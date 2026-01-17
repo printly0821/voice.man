@@ -9,9 +9,10 @@ Provides fault-tolerant batch processing with:
 - Graceful shutdown handling
 - Progress monitoring with ETA calculation
 - Thread-safe database operations
+- Comprehensive checkpoint validation with repair capabilities
 
 Usage:
-    from voice_man.services.checkpoint import CheckpointManager
+    from voice_man.services.checkpoint import CheckpointManager, CheckpointValidator
 
     manager = CheckpointManager(checkpoint_dir="data/checkpoints")
     state = manager.get_resume_state()
@@ -26,6 +27,11 @@ Usage:
         failed_files=[],
         results={"total": 2, "successful": 2}
     )
+
+    # Validate checkpoint before resume
+    result = manager.validate_current_workflow()
+    if not result.is_valid:
+        print(f"Validation failed: {result.get_summary()}")
 """
 
 from .checkpoint_manager import (
@@ -33,6 +39,11 @@ from .checkpoint_manager import (
     CheckpointManager,
     CheckpointMetadata,
     ResumeState,
+)
+from .checkpoint_validator import (
+    CheckpointValidator,
+    ValidationError,
+    ValidationResult,
 )
 from .error_classifier import (
     ErrorCategory,
@@ -55,6 +66,10 @@ __all__ = [
     "BatchCheckpoint",
     "CheckpointMetadata",
     "ResumeState",
+    # Checkpoint Validator
+    "CheckpointValidator",
+    "ValidationResult",
+    "ValidationError",
     # State Store
     "WorkflowStateStore",
     "WorkflowState",

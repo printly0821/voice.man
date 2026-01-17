@@ -5,7 +5,7 @@ Test complete pipeline from upload to psychology analysis
 
 import pytest
 from fastapi.testclient import TestClient
-from voice_man.main import app
+from voice_man.api.main import app
 
 
 @pytest.fixture

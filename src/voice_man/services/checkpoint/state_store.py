@@ -641,40 +641,55 @@ class WorkflowStateStore:
         conn.commit()
         return current
 
-    def save_checkpoint(self, checkpoint: CheckpointData) -> None:
+    def save_checkpoint(self, checkpoint: CheckpointData, fatal_on_failure: bool = True) -> None:
         """
         Save batch checkpoint.
 
         Args:
             checkpoint: Checkpoint data to save
+            fatal_on_failure: Raise exception on save failure (default: True)
+
+        Raises:
+            RuntimeError: If checkpoint save fails and fatal_on_failure is True
         """
-        conn = self._get_connection()
+        try:
+            conn = self._get_connection()
 
-        conn.execute(
-            """
-            INSERT INTO checkpoints (
-                batch_id, workflow_id, batch_index, processed_files, failed_files, results_json
-            ) VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(batch_id) DO UPDATE SET
-                workflow_id = excluded.workflow_id,
-                batch_index = excluded.batch_index,
-                processed_files = excluded.processed_files,
-                failed_files = excluded.failed_files,
-                results_json = excluded.results_json,
-                created_at = datetime('now')
-        """,
-            (
-                checkpoint.batch_id,
-                checkpoint.workflow_id,
-                checkpoint.batch_index,
-                json.dumps(checkpoint.processed_files),
-                json.dumps(checkpoint.failed_files),
-                checkpoint.results_json,
-            ),
-        )
+            # Validate checkpoint before saving
+            self._validate_checkpoint_data(checkpoint)
 
-        conn.commit()
-        logger.info(f"Checkpoint saved: {checkpoint.batch_id}")
+            conn.execute(
+                """
+                INSERT INTO checkpoints (
+                    batch_id, workflow_id, batch_index, processed_files, failed_files, results_json
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(batch_id) DO UPDATE SET
+                    workflow_id = excluded.workflow_id,
+                    batch_index = excluded.batch_index,
+                    processed_files = excluded.processed_files,
+                    failed_files = excluded.failed_files,
+                    results_json = excluded.results_json,
+                    created_at = datetime('now')
+            """,
+                (
+                    checkpoint.batch_id,
+                    checkpoint.workflow_id,
+                    checkpoint.batch_index,
+                    json.dumps(checkpoint.processed_files),
+                    json.dumps(checkpoint.failed_files),
+                    checkpoint.results_json,
+                ),
+            )
+
+            conn.commit()
+            logger.info(f"Checkpoint saved: {checkpoint.batch_id}")
+
+        except Exception as e:
+            error_msg = f"Failed to save checkpoint {checkpoint.batch_id}: {e}"
+            logger.error(error_msg)
+
+            if fatal_on_failure:
+                raise RuntimeError(error_msg) from e
 
     def get_checkpoint(self, batch_id: str) -> Optional[CheckpointData]:
         """
@@ -834,6 +849,159 @@ class WorkflowStateStore:
             logger.info(f"Deleted workflow: {workflow_id}")
 
         return deleted
+
+    def validate_checkpoint(self, batch_id: str) -> bool:
+        """
+        Validate a checkpoint before loading or resuming.
+
+        Performs comprehensive validation:
+        - Database connection check
+        - Checkpoint existence
+        - Data structure validity
+        - JSON parsing for results
+        - Workflow reference integrity
+
+        Args:
+            batch_id: Batch checkpoint identifier
+
+        Returns:
+            True if checkpoint is valid, False otherwise
+        """
+        try:
+            # Check database connection
+            conn = self._get_connection()
+
+            # Check checkpoint exists
+            cursor = conn.execute("SELECT * FROM checkpoints WHERE batch_id = ?", (batch_id,))
+            row = cursor.fetchone()
+
+            if row is None:
+                logger.warning(f"Checkpoint validation failed: {batch_id} not found")
+                return False
+
+            # Validate data structure
+            checkpoint = self.get_checkpoint(batch_id)
+            if checkpoint is None:
+                logger.warning(f"Checkpoint validation failed: {batch_id} could not be loaded")
+                return False
+
+            # Validate checkpoint data
+            self._validate_checkpoint_data(checkpoint)
+
+            # Check parent workflow exists
+            workflow = self.get_workflow_state(checkpoint.workflow_id)
+            if workflow is None:
+                logger.warning(
+                    f"Checkpoint validation failed: {batch_id} references "
+                    f"non-existent workflow {checkpoint.workflow_id}"
+                )
+                return False
+
+            logger.info(f"Checkpoint validation passed: {batch_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Checkpoint validation failed with exception: {e}")
+            return False
+
+    def health_check(self) -> Dict[str, Any]:
+        """
+        Perform health check on the checkpoint system.
+
+        Returns:
+            Dictionary with health status information
+        """
+        health = {
+            "healthy": True,
+            "database_accessible": False,
+            "workflow_count": 0,
+            "checkpoint_count": 0,
+            "file_state_count": 0,
+            "issues": [],
+        }
+
+        try:
+            # Test database connection
+            conn = self._get_connection()
+
+            # Check database accessibility
+            cursor = conn.execute("SELECT 1")
+            if cursor.fetchone():
+                health["database_accessible"] = True
+
+            # Count records
+            cursor = conn.execute("SELECT COUNT(*) FROM workflow_states")
+            health["workflow_count"] = cursor.fetchone()[0]
+
+            cursor = conn.execute("SELECT COUNT(*) FROM checkpoints")
+            health["checkpoint_count"] = cursor.fetchone()[0]
+
+            cursor = conn.execute("SELECT COUNT(*) FROM file_states")
+            health["file_state_count"] = cursor.fetchone()[0]
+
+            # Check for orphaned records
+            cursor = conn.execute(
+                """
+                SELECT COUNT(*) FROM file_states fs
+                LEFT JOIN workflow_states ws ON fs.workflow_id = ws.workflow_id
+                WHERE ws.workflow_id IS NULL
+            """
+            )
+            orphaned_files = cursor.fetchone()[0]
+            if orphaned_files > 0:
+                health["issues"].append(f"{orphaned_files} orphaned file states found")
+                health["healthy"] = False
+
+            # Check for workflows in invalid state
+            cursor = conn.execute(
+                "SELECT COUNT(*) FROM workflow_states WHERE status NOT IN ('running', 'completed', 'failed', 'crashed', 'cancelled')"
+            )
+            invalid_states = cursor.fetchone()[0]
+            if invalid_states > 0:
+                health["issues"].append(f"{invalid_states} workflows with invalid status")
+                health["healthy"] = False
+
+        except Exception as e:
+            health["healthy"] = False
+            health["issues"].append(f"Health check failed: {e}")
+            logger.error(f"Health check failed: {e}")
+
+        return health
+
+    def _validate_checkpoint_data(self, checkpoint: CheckpointData) -> None:
+        """
+        Validate checkpoint data structure.
+
+        Args:
+            checkpoint: Checkpoint data to validate
+
+        Raises:
+            ValueError: If checkpoint data is invalid
+        """
+        # Check required fields
+        if not checkpoint.batch_id:
+            raise ValueError("Checkpoint has empty batch_id")
+
+        if not checkpoint.workflow_id:
+            raise ValueError("Checkpoint has empty workflow_id")
+
+        if checkpoint.batch_index < 1:
+            raise ValueError(f"Checkpoint has invalid batch_index: {checkpoint.batch_index}")
+
+        # Check processed_files is a list
+        if not isinstance(checkpoint.processed_files, list):
+            raise ValueError("Checkpoint processed_files is not a list")
+
+        # Check failed_files is a list
+        if not isinstance(checkpoint.failed_files, list):
+            raise ValueError("Checkpoint failed_files is not a list")
+
+        # Validate results_json is valid JSON
+        if checkpoint.results_json:
+            try:
+                json.loads(checkpoint.results_json)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Checkpoint results_json is invalid: {e}") from e
 
     def close(self):
         """Close database connection."""

@@ -11,11 +11,13 @@ Provides high-level checkpoint management for batch workflows:
 
 import json
 import logging
+import signal
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
+from .checkpoint_validator import CheckpointValidator, ValidationError, ValidationResult
 from .state_store import (
     CheckpointData,
     FileState,
@@ -163,8 +165,17 @@ class CheckpointManager:
         db_path = str(self.checkpoint_dir / "state.db")
         self.state_store = WorkflowStateStore(db_path=db_path)
 
+        # Initialize validator
+        self.validator = CheckpointValidator(state_store=self.state_store)
+
         # Current workflow
         self._current_workflow_id: Optional[str] = None
+
+        # Signal handling state
+        self._original_handlers: Dict[int, Any] = {}
+
+        # Auto-detect crashed workflows on initialization
+        self._auto_detect_crashed_workflow()
 
         logger.info(f"CheckpointManager initialized: {checkpoint_dir}")
 
@@ -348,12 +359,18 @@ class CheckpointManager:
         logger.info(f"Loaded checkpoint: {checkpoint.batch_id}")
         return checkpoint
 
-    def get_resume_state(self) -> Optional[ResumeState]:
+    def get_resume_state(self, validate: bool = True) -> Optional[ResumeState]:
         """
-        Get the current resume state.
+        Get the current resume state with optional validation.
+
+        Args:
+            validate: Whether to validate checkpoint before resuming (default: True)
 
         Returns:
             ResumeState with information for resuming, or None if no workflow exists
+
+        Raises:
+            RuntimeError: If validation fails and validate=True
         """
         if self._current_workflow_id is None:
             # Try to find the latest running workflow
@@ -367,6 +384,37 @@ class CheckpointManager:
         workflow_state = self.state_store.get_workflow_state(self._current_workflow_id)
         if workflow_state is None:
             return None
+
+        # Validate workflow and checkpoints before resuming
+        if validate:
+            validation_result = self.validate_current_workflow()
+            if not validation_result.is_valid:
+                error_msg = (
+                    f"Cannot resume from invalid checkpoint: {validation_result.get_summary()}"
+                )
+                logger.error(error_msg)
+
+                # Log all critical errors
+                for error in validation_result.errors:
+                    if error.severity == "critical":
+                        logger.error(f"  [{error.category}] {error.message}")
+
+                # Check if errors are repairable
+                if validation_result.repairable_count > 0:
+                    logger.info(
+                        f"Attempting to repair {validation_result.repairable_count} repairable errors..."
+                    )
+                    repaired = self.validator.repair_all(validation_result)
+                    if repaired > 0:
+                        logger.info(f"Successfully repaired {repaired} errors")
+                        # Re-validate after repair
+                        validation_result = self.validate_current_workflow()
+                        if not validation_result.is_valid:
+                            raise RuntimeError(error_msg)
+                    else:
+                        raise RuntimeError(error_msg)
+                else:
+                    raise RuntimeError(error_msg)
 
         # Get checkpoint information
         checkpoints = self.state_store.get_workflow_checkpoints(self._current_workflow_id)
@@ -420,6 +468,49 @@ class CheckpointManager:
         )
 
         return resume_state
+
+    def validate_current_workflow(self) -> ValidationResult:
+        """
+        Validate the current workflow and all its checkpoints.
+
+        Returns:
+            ValidationResult with all errors found
+        """
+        if self._current_workflow_id is None:
+            # Create empty invalid result
+            result = ValidationResult(is_valid=False)
+            result.add_error(
+                ValidationError(
+                    severity="critical",
+                    category="no_workflow",
+                    message="No current workflow set",
+                    repairable=False,
+                )
+            )
+            return result
+
+        return self.validator.validate_workflow(self._current_workflow_id)
+
+    def validate_checkpoint(self, batch_id: str) -> ValidationResult:
+        """
+        Validate a specific checkpoint.
+
+        Args:
+            batch_id: Batch checkpoint identifier
+
+        Returns:
+            ValidationResult with all errors found
+        """
+        return self.validator.validate_checkpoint(batch_id)
+
+    def health_check(self) -> Dict[str, Any]:
+        """
+        Perform health check on the checkpoint system.
+
+        Returns:
+            Dictionary with health status information
+        """
+        return self.state_store.health_check()
 
     def list_checkpoints(self) -> List[CheckpointMetadata]:
         """
@@ -615,6 +706,207 @@ class CheckpointManager:
     def _get_checkpoint_json_path(self, batch_id: str) -> Path:
         """Get the JSON file path for a checkpoint."""
         return self.checkpoint_dir / f"{batch_id}_checkpoint.json"
+
+    # TAG 4: Signal Handling and Crash Recovery
+
+    def register_signal_handlers(self) -> Callable[[], None]:
+        """
+        Register signal handlers for graceful shutdown.
+
+        Registers handlers for SIGINT and SIGTERM that:
+        1. Save current checkpoint
+        2. Mark workflow as CRASHED
+        3. Ensure database consistency
+
+        Returns:
+            Cleanup function that restores original signal handlers
+
+        Example:
+            cleanup = manager.register_signal_handlers()
+            try:
+                # Do work
+            finally:
+                cleanup()
+        """
+        # Store original handlers
+        self._original_handlers[signal.SIGINT] = signal.getsignal(signal.SIGINT)
+        self._original_handlers[signal.SIGTERM] = signal.getsignal(signal.SIGTERM)
+
+        # Register new handlers
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+
+        logger.info("Signal handlers registered for SIGINT and SIGTERM")
+
+        # Return cleanup function
+        def cleanup() -> None:
+            """Restore original signal handlers."""
+            signal.signal(signal.SIGINT, self._original_handlers.get(signal.SIGINT, signal.SIG_DFL))
+            signal.signal(
+                signal.SIGTERM, self._original_handlers.get(signal.SIGTERM, signal.SIG_DFL)
+            )
+            self._original_handlers.clear()
+            logger.info("Signal handlers restored")
+
+        return cleanup
+
+    def mark_workflow_as_crashed(self) -> None:
+        """
+        Mark the current workflow as CRASHED.
+
+        This method is called by signal handlers when the process
+        receives SIGINT or SIGTERM. It updates the workflow status
+        to CRASHED while preserving all checkpoint data.
+
+        Safe to call even if no current workflow exists.
+        """
+        if self._current_workflow_id is None:
+            logger.warning("No current workflow to mark as crashed")
+            return
+
+        try:
+            self.state_store.update_workflow_state(
+                self._current_workflow_id,
+                status=WorkflowStatus.CRASHED,
+            )
+            logger.info(f"Workflow marked as CRASHED: {self._current_workflow_id}")
+        except Exception as e:
+            logger.error(f"Failed to mark workflow as crashed: {e}")
+
+    def detect_crashed_workflow(self) -> Optional[WorkflowState]:
+        """
+        Detect and return the most recent crashed workflow.
+
+        Returns:
+            WorkflowState of the most recent crashed workflow, or None if none found
+
+        Example:
+            crashed = manager.detect_crashed_workflow()
+            if crashed:
+                print(f"Found crashed workflow: {crashed.workflow_id}")
+        """
+        crashed_workflows = self.state_store.list_workflows(status=WorkflowStatus.CRASHED)
+
+        if not crashed_workflows:
+            return None
+
+        # Return the most recently crashed workflow
+        return crashed_workflows[0]
+
+    def _auto_detect_crashed_workflow(self) -> None:
+        """
+        Auto-detect and select crashed workflow on initialization.
+
+        Called during __init__ to automatically resume from crashed workflow.
+        """
+        crashed = self.detect_crashed_workflow()
+
+        if crashed:
+            self._current_workflow_id = crashed.workflow_id
+            logger.info(
+                f"Auto-detected crashed workflow: {crashed.workflow_id}. "
+                f"Use --resume mode to continue."
+            )
+
+    def _signal_handler(self, signum: int, frame) -> None:
+        """
+        Handle SIGINT and SIGTERM signals.
+
+        Performs graceful shutdown:
+        1. Save current checkpoint if workflow exists
+        2. Mark workflow as CRASHED
+        3. Ensure database consistency
+        4. Exit with appropriate signal
+
+        Args:
+            signum: Signal number (SIGINT or SIGTERM)
+            frame: Current stack frame
+        """
+        signal_name = signal.Signals(signum).name
+        logger.info(f"Received signal {signal_name} ({signum}), initiating graceful shutdown...")
+
+        try:
+            # Save current checkpoint if we have an active workflow
+            if self._current_workflow_id is not None:
+                logger.info("Saving checkpoint before shutdown...")
+                self._save_current_state()
+
+                # Mark workflow as crashed
+                logger.info("Marking workflow as CRASHED...")
+                self.mark_workflow_as_crashed()
+
+            # Ensure database is closed properly
+            logger.info("Closing database connection...")
+            self.state_store.close()
+
+            logger.info("Graceful shutdown complete")
+
+        except Exception as e:
+            logger.error(f"Error during graceful shutdown: {e}")
+
+        # Re-raise the signal to ensure process exits
+        signal.signal(signum, signal.SIG_DFL)
+        signal.raise_signal(signum)
+
+    def _save_current_state(self) -> None:
+        """
+        Save current state during signal handling.
+
+        Attempts to save a checkpoint with current progress.
+        If no batch checkpoint exists yet, creates an initial checkpoint.
+        """
+        if self._current_workflow_id is None:
+            return
+
+        try:
+            # Get workflow state
+            workflow = self.state_store.get_workflow_state(self._current_workflow_id)
+            if workflow is None:
+                return
+
+            # Try to get latest checkpoint
+            checkpoints = self.state_store.get_workflow_checkpoints(self._current_workflow_id)
+
+            if checkpoints:
+                # Update latest checkpoint timestamp
+                last_checkpoint = checkpoints[-1]
+                logger.info(f"Updating existing checkpoint: {last_checkpoint.batch_id}")
+                # The checkpoint is already saved, we just update the state
+            else:
+                # Create initial checkpoint if processing has started
+                if workflow.processed_files > 0 or workflow.failed_files > 0:
+                    batch_id = f"{self._current_workflow_id}_crash_checkpoint"
+                    logger.info(f"Creating crash checkpoint: {batch_id}")
+
+                    # Get file states
+                    all_files = self.state_store.get_files_by_status(
+                        self._current_workflow_id, FileStatus.PENDING
+                    )
+
+                    processed = []
+                    failed = []
+
+                    for fs in all_files:
+                        if fs.status == FileStatus.COMPLETED:
+                            processed.append(fs.file_path)
+                        elif fs.status == FileStatus.FAILED:
+                            failed.append(fs.file_path)
+
+                    # Save checkpoint
+                    self.save_batch_checkpoint(
+                        batch_id=batch_id,
+                        processed_files=processed,
+                        failed_files=failed,
+                        results={
+                            "crash_recovery": True,
+                            "processed": len(processed),
+                            "failed": len(failed),
+                        },
+                        batch_index=workflow.current_batch,
+                    )
+
+        except Exception as e:
+            logger.error(f"Failed to save current state: {e}")
 
     def close(self) -> None:
         """Close the checkpoint manager and database connection."""

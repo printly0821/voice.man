@@ -121,69 +121,141 @@ class GPUMonitorService:
         if memory_status.get("critical", False):
             usage = memory_status.get("usage_percentage", 0)
             if usage >= self.thresholds.fallback_percent:
-                logger.warning(
-                    f"GPU memory critical ({usage:.1f}%), falling back to CPU"
-                )
+                logger.warning(f"GPU memory critical ({usage:.1f}%), falling back to CPU")
                 return "cpu"
 
         return "cuda"
+
+    def _get_gpu_memory_stats_torch(self) -> Dict:
+        """
+        Get GPU memory statistics using PyTorch native functions.
+
+        This is used as a fallback when NVML is not available or fails.
+        PyTorch's memory functions work on unified memory GPUs like GB10.
+
+        Returns:
+            Dictionary with memory statistics:
+            - total_mb: Total GPU memory in MB
+            - used_mb: Used GPU memory in MB (allocated)
+            - reserved_mb: Reserved GPU memory in MB
+            - free_mb: Free GPU memory in MB
+            - usage_percentage: Memory usage percentage
+            - available: True if GPU is available
+            - source: "torch" to indicate PyTorch native
+        """
+        if not self.is_gpu_available():
+            return {
+                "total_mb": 0,
+                "used_mb": 0,
+                "reserved_mb": 0,
+                "free_mb": 0,
+                "usage_percentage": 0.0,
+                "available": False,
+                "source": "torch",
+            }
+
+        try:
+            import torch
+
+            # Get memory info (free, total) in bytes
+            free_bytes, total_bytes = torch.cuda.mem_get_info(self.device_index)
+
+            # Get allocated and reserved memory in bytes
+            allocated_bytes = torch.cuda.memory_allocated(self.device_index)
+            reserved_bytes = torch.cuda.memory_reserved(self.device_index)
+
+            # Convert to MB
+            total_mb = total_bytes / (1024 * 1024)
+            allocated_mb = allocated_bytes / (1024 * 1024)
+            reserved_mb = reserved_bytes / (1024 * 1024)
+            free_mb = free_bytes / (1024 * 1024)
+
+            # Use reserved memory for usage percentage (more conservative)
+            # On unified memory GPUs, reserved represents actual GPU memory commitment
+            usage_percentage = (reserved_bytes / total_bytes) * 100 if total_bytes > 0 else 0.0
+
+            stats = {
+                "total_mb": total_mb,
+                "used_mb": allocated_mb,
+                "reserved_mb": reserved_mb,
+                "free_mb": free_mb,
+                "usage_percentage": usage_percentage,
+                "available": True,
+                "source": "torch",
+            }
+
+            logger.debug(
+                f"GPU memory stats (PyTorch): {allocated_mb:.0f}MB allocated, "
+                f"{reserved_mb:.0f}MB reserved / {total_mb:.0f}MB ({usage_percentage:.1f}%)"
+            )
+            return stats
+
+        except Exception as e:
+            logger.warning(f"Failed to get GPU memory stats via PyTorch: {e}")
+            return {
+                "total_mb": 0,
+                "used_mb": 0,
+                "reserved_mb": 0,
+                "free_mb": 0,
+                "usage_percentage": 0.0,
+                "available": False,
+                "source": "torch",
+            }
 
     def get_gpu_memory_stats(self) -> Dict:
         """
         Get GPU memory statistics.
 
+        Tries NVML first for accurate metrics, falls back to PyTorch native
+        functions if NVML is unavailable or fails (e.g., on unified memory
+        GPUs like NVIDIA GB10).
+
         Returns:
             Dictionary with memory statistics:
             - total_mb: Total GPU memory in MB
             - used_mb: Used GPU memory in MB
+            - reserved_mb: Reserved GPU memory in MB (PyTorch only)
             - free_mb: Free GPU memory in MB
             - usage_percentage: Memory usage percentage
+            - source: "nvml" or "torch" indicating data source
 
         Implements:
             U2: GPU memory real-time monitoring
         """
-        if not self._ensure_nvml_init():
-            return {
-                "total_mb": 0,
-                "used_mb": 0,
-                "free_mb": 0,
-                "usage_percentage": 0.0,
-                "available": False,
-            }
+        # Try NVML first (more accurate for discrete GPUs)
+        if self._ensure_nvml_init():
+            try:
+                import pynvml
 
-        try:
-            import pynvml
+                handle = pynvml.nvmlDeviceGetHandleByIndex(self.device_index)
+                mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
 
-            handle = pynvml.nvmlDeviceGetHandleByIndex(self.device_index)
-            mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+                total_mb = mem_info.total / (1024 * 1024)
+                used_mb = mem_info.used / (1024 * 1024)
+                free_mb = (mem_info.total - mem_info.used) / (1024 * 1024)
+                usage_percentage = (mem_info.used / mem_info.total) * 100
 
-            total_mb = mem_info.total / (1024 * 1024)
-            used_mb = mem_info.used / (1024 * 1024)
-            free_mb = (mem_info.total - mem_info.used) / (1024 * 1024)
-            usage_percentage = (mem_info.used / mem_info.total) * 100
+                stats = {
+                    "total_mb": total_mb,
+                    "used_mb": used_mb,
+                    "reserved_mb": used_mb,  # Same as used for NVML
+                    "free_mb": free_mb,
+                    "usage_percentage": usage_percentage,
+                    "available": True,
+                    "source": "nvml",
+                }
 
-            stats = {
-                "total_mb": total_mb,
-                "used_mb": used_mb,
-                "free_mb": free_mb,
-                "usage_percentage": usage_percentage,
-                "available": True,
-            }
+                logger.debug(
+                    f"GPU memory stats (NVML): {used_mb:.0f}MB / {total_mb:.0f}MB ({usage_percentage:.1f}%)"
+                )
+                return stats
 
-            logger.debug(
-                f"GPU memory stats: {used_mb:.0f}MB / {total_mb:.0f}MB ({usage_percentage:.1f}%)"
-            )
-            return stats
+            except Exception as e:
+                logger.warning(f"NVML memory query failed: {e}, falling back to PyTorch")
+                # Fall through to PyTorch fallback
 
-        except Exception as e:
-            logger.warning(f"Failed to get GPU memory stats: {e}")
-            return {
-                "total_mb": 0,
-                "used_mb": 0,
-                "free_mb": 0,
-                "usage_percentage": 0.0,
-                "available": False,
-            }
+        # Fallback to PyTorch native functions (works on GB10 and unified memory GPUs)
+        return self._get_gpu_memory_stats_torch()
 
     def check_memory_status(self) -> Dict:
         """
@@ -255,9 +327,7 @@ class GPUMonitorService:
         if status.get("auto_adjust_recommended", False):
             # Reduce batch size by 50%
             new_size = max(current_batch_size // 2, self.min_batch_size)
-            logger.info(
-                f"Recommending batch size reduction: {current_batch_size} -> {new_size}"
-            )
+            logger.info(f"Recommending batch size reduction: {current_batch_size} -> {new_size}")
             return new_size
 
         return current_batch_size

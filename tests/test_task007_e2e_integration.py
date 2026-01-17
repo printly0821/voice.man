@@ -17,7 +17,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 
-from voice_man.main import app
+from voice_man.api.main import app
 
 
 class TestE2EPipeline:

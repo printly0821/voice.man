@@ -1,0 +1,72 @@
+{
+  "mode": "gpu_optimized",
+  "test_time": "2026-01-13T12:18:22.004291",
+  "num_files": 10,
+  "total_time_seconds": 0.5752804279327393,
+  "avg_time_per_file": 0.05752804279327393,
+  "gpu_stats": {
+    "queue_size": 1,
+    "backpressure_active": false,
+    "is_running": false,
+    "files_processed": 0,
+    "files_failed": 10,
+    "gpu_optimization_enabled": true,
+    "batches_processed": 10,
+    "cache_hits": 0,
+    "cache_misses": 10,
+    "cache_hit_rate": 0.0,
+    "gpus_available": 1
+  },
+  "results": [
+    {
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신동식(3D개발자)_250926_181835.m4a",
+      "result": null,
+      "error": "STT Error: RobustPipeline.execute_with_retry() missing 1 required positional argument: 'func'"
+    },
+    {
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신기연_250620_145742.m4a",
+      "result": null,
+      "error": "STT Error: RobustPipeline.execute_with_retry() missing 1 required positional argument: 'func'"
+    },
+    {
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신기연_251014_092820.m4a",
+      "result": null,
+      "error": "STT Error: RobustPipeline.execute_with_retry() missing 1 required positional argument: 'func'"
+    },
+    {
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신동식(3D개발자)_250522_102804.m4a",
+      "result": null,
+      "error": "STT Error: RobustPipeline.execute_with_retry() missing 1 required positional argument: 'func'"
+    },
+    {
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신기연_251029_213545.m4a",
+      "result": null,
+      "error": "STT Error: RobustPipeline.execute_with_retry() missing 1 required positional argument: 'func'"
+    },
+    {
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신동식(3D개발자)_251210_184229.m4a",
+      "result": null,
+      "error": "STT Error: RobustPipeline.execute_with_retry() missing 1 required positional argument: 'func'"
+    },
+    {
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신기연_250904_093101.m4a",
+      "result": null,
+      "error": "STT Error: RobustPipeline.execute_with_retry() missing 1 required positional argument: 'func'"
+    },
+    {
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신기연_250930_121451.m4a",
+      "result": null,
+      "error": "STT Error: RobustPipeline.execute_with_retry() missing 1 required positional argument: 'func'"
+    },
+    {
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신기연_250611_221328.m4a",
+      "result": null,
+      "error": "STT Error: RobustPipeline.execute_with_retry() missing 1 required positional argument: 'func'"
+    },
+    {
+      "file_path": "/home/innojini/dev/voice.man/ref/call/통화 녹음 신동식(3D개발자)_250618_133149.m4a",
+      "result": null,
+      "error": "STT Error: RobustPipeline.execute_with_retry() missing 1 required positional argument: 'func'"
+    }
+  ]
+}

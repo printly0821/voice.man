@@ -224,7 +224,9 @@ class ARMCPUPipeline:
 
         # Measure sequential time for comparison
         seq_start = time.time()
-        sequential_results = [load_func(f) for f in files[:5]]  # Sample 5 files
+        _sequential_results = [
+            load_func(f) for f in files[:5]
+        ]  # Sample 5 files (unused, timing only)
         sequential_time = time.time() - seq_start
 
         # Parallel loading

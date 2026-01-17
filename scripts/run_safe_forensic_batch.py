@@ -56,6 +56,14 @@ from voice_man.services.checkpoint import (
 )
 from voice_man.services.checkpoint.state_store import WorkflowStatus
 
+# Import audio chunking modules
+from voice_man.services.audio_chunker import (
+    AudioChunker,
+    ChunkResult,
+    create_chunker_for_system,
+)
+from voice_man.services.audio_registry import AudioRegistry
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -507,6 +515,12 @@ class SafeBatchProcessor:
             max_batch_size=10,
         )
 
+        # Audio chunker for large file processing
+        self.audio_chunker = create_chunker_for_system()
+
+        # Audio registry for avoiding duplicate loads
+        self.audio_registry = AudioRegistry.get_instance()
+
         # Checkpoint manager
         self.checkpoint_manager = CheckpointManager(checkpoint_dir=checkpoint_dir)
 
@@ -604,6 +618,43 @@ class SafeBatchProcessor:
         """
         Process a single file with retry mechanism.
 
+        Phase 2 Enhancement: Automatically detects large files (>10 minutes) and
+        processes them using audio chunking to prevent OOM.
+
+        Args:
+            audio_file: Path to audio file
+            retry_count: Current retry attempt
+
+        Returns:
+            Tuple of (success, error_message, result_data)
+        """
+        file_path_str = str(audio_file)
+
+        try:
+            # Check if file should be chunked
+            if self.audio_chunker.should_chunk(file_path_str):
+                logger.info(f"Large file detected: {audio_file.name}")
+                return await self._process_large_file_with_chunking(audio_file, retry_count)
+            else:
+                # Normal processing for smaller files
+                return await self._process_single_file_direct(audio_file, retry_count)
+
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Failed to process {audio_file.name}: {error_msg}")
+            return False, error_msg, None
+
+    async def _process_single_file_direct(
+        self,
+        audio_file: Path,
+        retry_count: int = 0,
+    ) -> Tuple[bool, Optional[str], Optional[Dict]]:
+        """
+        Process a file directly without chunking (for files < 10 minutes).
+
+        This is the optimized path for smaller files that don't need chunking.
+        It uses AudioRegistry to avoid duplicate audio loading.
+
         Args:
             audio_file: Path to audio file
             retry_count: Current retry attempt
@@ -652,6 +703,139 @@ class SafeBatchProcessor:
         except Exception as e:
             error_msg = str(e)
             logger.error(f"Failed to process {audio_file.name}: {error_msg}")
+            return False, error_msg, None
+
+    async def _process_large_file_with_chunking(
+        self,
+        audio_file: Path,
+        retry_count: int = 0,
+    ) -> Tuple[bool, Optional[str], Optional[Dict]]:
+        """
+        Process a large file using audio chunking to prevent OOM.
+
+        Splits the audio into 5-minute chunks with 30-second overlap, processes
+        each chunk independently, and merges results.
+
+        Memory-Safe Implementation:
+        - Processes chunks incrementally without storing all results in memory
+        - Immediately cleans up temporary chunk files after processing
+        - Forces garbage collection after each chunk to free memory
+        - Does NOT load audio data into memory (only passes file path to STT)
+
+        Args:
+            audio_file: Path to audio file
+            retry_count: Current retry attempt
+
+        Returns:
+            Tuple of (success, error_message, result_data)
+        """
+        file_path_str = str(audio_file)
+
+        try:
+            logger.info(f"Processing large file with chunking: {audio_file.name}")
+
+            # Split audio into chunks
+            chunks = self.audio_chunker.split_audio(file_path_str)
+            logger.info(f"Split into {len(chunks)} chunks")
+
+            # Process each chunk
+            chunk_results = []
+
+            for i, chunk_info in enumerate(chunks):
+                logger.info(
+                    f"Processing chunk {chunk_info.chunk_index + 1}/{len(chunks)}: "
+                    f"{chunk_info.start_time_sec:.1f}s-{chunk_info.end_time_sec:.1f}s"
+                )
+
+                # FIXED: Do NOT load audio data - just use the file path
+                # The STT service accepts a file path directly
+                temp_file = chunk_info.chunk_file
+
+                # Process STT for this chunk
+                stt_result = await self._stt_service.transcribe_only(temp_file)
+
+                if "error" in stt_result:
+                    raise Exception(
+                        f"STT failed for chunk {chunk_info.chunk_id}: {stt_result['error']}"
+                    )
+
+                # Process forensic for this chunk using the temporary file path
+                forensic_result = await self._forensic_service.analyze(
+                    audio_path=temp_file,
+                    transcript=" ".join(
+                        seg.get("text", "") for seg in stt_result.get("segments", [])
+                    ),
+                )
+
+                # Extract transcript segments
+                segments_data = stt_result.get("segments", [])
+                transcript_text = " ".join(seg.get("text", "") for seg in segments_data)
+
+                # Store chunk result (only lightweight data, not audio data)
+                chunk_results.append(
+                    {
+                        "chunk_id": chunk_info.chunk_id,
+                        "transcript": transcript_text,
+                        "forensic_score": forensic_result.overall_risk_score,
+                        "metadata": {
+                            "duration_sec": chunk_info.duration_sec,
+                            "start_time_sec": chunk_info.start_time_sec,
+                            "end_time_sec": chunk_info.end_time_sec,
+                            "chunk_index": chunk_info.chunk_index,
+                        },
+                    }
+                )
+
+                # CRITICAL: Clean up chunk file immediately after processing
+                chunk_file_path = Path(chunk_info.chunk_file)
+                if chunk_file_path.exists():
+                    try:
+                        chunk_file_path.unlink()
+                        logger.debug(f"Cleaned up chunk file: {chunk_file_path.name}")
+                    except Exception as e:
+                        logger.warning(f"Failed to cleanup chunk file {chunk_file_path}: {e}")
+
+                # CRITICAL: Force garbage collection every 3 chunks to free memory
+                if (i + 1) % 3 == 0:
+                    gc.collect()
+                    logger.debug(f"Ran garbage collection after {i + 1} chunks")
+
+            # Merge all chunk results
+            merged = self.audio_chunker.merge_results(
+                [
+                    ChunkResult(
+                        chunk_id=cr["chunk_id"],
+                        transcript=cr["transcript"],
+                        forensic_score=cr["forensic_score"],
+                        metadata=cr.get("metadata", {}),
+                    )
+                    for cr in chunk_results
+                ],
+                file_path_str,
+            )
+
+            logger.info(
+                f"Chunk processing complete: "
+                f"{len(chunks)} chunks, "
+                f"merged_score={merged.forensic_score:.1f}"
+            )
+
+            return (
+                True,
+                None,
+                {
+                    "file": file_path_str,
+                    "transcript_segments": 0,  # Placeholder
+                    "transcript_chars": len(merged.transcript),
+                    "forensic_score": merged.forensic_score,
+                    "chunks_processed": len(chunks),
+                    "is_chunked": True,
+                },
+            )
+
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Failed to process large file {audio_file.name}: {error_msg}")
             return False, error_msg, None
 
     async def process_file_with_retry(

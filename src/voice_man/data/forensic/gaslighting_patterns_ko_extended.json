@@ -1,0 +1,569 @@
+{
+  "version": "2.0.0",
+  "description": "가스라이팅 언어 패턴 데이터베이스 (한국어) - MentalManip 통합 확장판",
+  "source": "Armenian Folia Anglistika 2024, Speech Acts analysis 2025, MentalManip (ACL 2024)",
+  "last_updated": "2026-01-13",
+  "references": [
+    "MentalManip: A Dataset For Fine-grained Analysis of Mental Manipulation in Conversations (ACL 2024)",
+    "Simon's psychological manipulation taxonomy",
+    "https://github.com/audreycs/MentalManip"
+  ],
+  "mapping_note": "11 manipulation techniques from MentalManip integrated with existing 7 gaslighting patterns",
+  "patterns": [
+    {
+      "mentalmanip_code": "DEN",
+      "type": "denial",
+      "type_ko": "부정",
+      "description_ko": "상대방의 경험이나 기억을 부정하거나 잘못된 부분에 대해 혼란스러워하는 척하는 패턴",
+      "description_en": "The manipulator either denies wrongdoing or pretends to be confused about others' concerns",
+      "severity_weight": 0.8,
+      "victim_vulnerability": ["reality_testing", "memory_confidence"],
+      "patterns_ko": [
+        "그런 적 없어",
+        "내가 언제 그랬어",
+        "네가 잘못 들은 거야",
+        "그건 사실이 아니야",
+        "그런 거 없었는데",
+        "네가 잘못 기억하는 거야",
+        "상상한 거지",
+        "그건 없었던 일이야",
+        "거짓말하지 마",
+        "말도 안 되는 소리해",
+        "무슨 소리야",
+        "내가 그럴 리가",
+        "헛소리하지 마",
+        "네가 이상한 거야"
+      ],
+      "patterns_en": [
+        "That never happened",
+        "I never said that",
+        "You must have heard wrong",
+        "That's not true",
+        "What are you talking about"
+      ]
+    },
+    {
+      "mentalmanip_code": "EVA",
+      "type": "evasion",
+      "type_ko": "회피",
+      "description_ko": "관심을 기울이지 않거나 관련 없는 대답으로 회피하는 패턴",
+      "description_en": "The manipulator refuses to pay attention to something or gives irrelevant or vague responses",
+      "severity_weight": 0.5,
+      "victim_vulnerability": ["need_for_closure", "assertiveness"],
+      "patterns_ko": [
+        "글쎄",
+        "잘 모르겠는데",
+        "아니 그게",
+        "뭔 말인지",
+        "다행에다",
+        "그냥",
+        "별거 아니야",
+        "알아서 해",
+        "상관 안 해",
+        "그게 중요하냐",
+        "다른 얘기하자",
+        "패스해",
+        "건너뛰자",
+        "나중에 얘기해"
+      ],
+      "patterns_en": [
+        "I don't know",
+        "Whatever",
+        "That's not important",
+        "Let's talk about something else",
+        "I don't want to talk about this"
+      ]
+    },
+    {
+      "mentalmanip_code": "FEI",
+      "type": "feigning_innocence",
+      "type_ko": "무죄 강조",
+      "description_ko": "피해를 입힌 것이 우연이거나 실수였다고 암시하는 패턴",
+      "description_en": "The manipulator implies that any harm caused was accidental",
+      "severity_weight": 0.6,
+      "victim_vulnerability": ["trust", "forgiveness_tendency"],
+      "patterns_ko": [
+        "일부러 그런 거 아니었어",
+        "실수였다고",
+        "고의 아니야",
+        "미안한데",
+        "몰랐어",
+        "의도한 게 아냐",
+        "부주의했을 뿐이야",
+        "악의 없었어",
+        "그냥 실수야",
+        "네가 오해한 거야",
+        "진짜 몰랐다고",
+        "내가 왜 그러겠어"
+      ],
+      "patterns_en": [
+        "I didn't mean to",
+        "It was an accident",
+        "I didn't know",
+        "You're misunderstanding",
+        "It was a mistake"
+      ]
+    },
+    {
+      "mentalmanip_code": "RAT",
+      "type": "rationalization",
+      "type_ko": "합리화",
+      "description_ko": "부적절한 행동을 변명으로 합리화하는 패턴",
+      "description_en": "The manipulator rationalizes their inappropriate behavior with excuses",
+      "severity_weight": 0.7,
+      "victim_vulnerability": ["critical_thinking", "self_assertion"],
+      "patterns_ko": [
+        "상황이 그랬을 뿐이야",
+        "어쩔 수 없었어",
+        "다들 그렇게 해",
+        "그게 원래 방식이야",
+        "누구나 그렇지",
+        "상식적인 거야",
+        "네가 이해를 못 해서 그래",
+        "타이밍이 안 좋았어",
+        "환경 탓이야",
+        "상황이 급박했어",
+        "어쩔 수 없는 상황",
+        "그게 사회현실이야"
+      ],
+      "patterns_en": [
+        "It was the situation",
+        "I had no choice",
+        "Everyone does it",
+        "That's just how things are",
+        "You wouldn't understand"
+      ]
+    },
+    {
+      "mentalmanip_code": "VIC",
+      "type": "playing_victim",
+      "type_ko": "피해자 연기",
+      "description_ko": "동정이나 관심을 얻기 위해 자신을 피해자로 포장하는 패턴",
+      "description_en": "The manipulator portrays themselves as a victim to gain sympathy, attention, or divert focus from their misconduct",
+      "severity_weight": 0.85,
+      "victim_vulnerability": ["empathy", "guilt_proneness", "caretaking"],
+      "patterns_ko": [
+        "내가 더 힘들어",
+        "나만 손해야",
+        "세상이 나한테만 unfair해",
+        "왜 나만",
+        "내가 제일 억울해",
+        "아무도 내 편 안 해줘",
+        "다들 나만 attack 해",
+        "나 때문에 이렇게 된 거 아닌데",
+        "내가 제일 많이 참았어",
+        "내가 이렇게까지 했는데",
+        "내가 누구라고",
+        "나만 이렇게 고생해"
+      ],
+      "patterns_en": [
+        "I'm the one suffering",
+        "Why me",
+        "No one understands me",
+        "I'm the victim here",
+        "I've done so much for you"
+      ]
+    },
+    {
+      "mentalmanip_code": "SER",
+      "type": "playing_servant",
+      "type_ko": "봉사자 연기",
+      "description_ko": "이기적인 동기를 고귀한 원인에 대한 기여로 위장하는 패턴",
+      "description_en": "The manipulator disguises their self-serving motives as a contribution to a more noble cause",
+      "severity_weight": 0.75,
+      "victim_vulnerability": ["gratitude", "loyalty", "obligation"],
+      "patterns_ko": [
+        "다 널 위해서야",
+        "내가 너 아니면 누가 챙겨",
+        "네가 날 필요로 하잖아",
+        "나 없으면 못 살잖아",
+        "다 내가 잘해줬잖아",
+        "내가 너한테 얼마나 잘하는데",
+        "나만큼 널 위하는 사람 없어",
+        "다 너 좋으라고 하는 거야",
+        "감사할 줄 알아야지",
+        "내가 너한테 투자한 게 얼마야",
+        "내가 너를 위해 희생했는데",
+        "네가 날 어떻게 대하든"
+      ],
+      "patterns_en": [
+        "I'm doing this for you",
+        "No one else would put up with you",
+        "You need me",
+        "You can't live without me",
+        "After everything I've done for you"
+      ]
+    },
+    {
+      "mentalmanip_code": "S_B",
+      "type": "shaming_belittlement",
+      "type_ko": "수치심 조성",
+      "description_ko": "비꼬거나 비판, 하대하여 열등감, 부적절감, 당혹감을 느끼게 하는 패턴",
+      "description_en": "The manipulator uses sarcasm, criticism, and put-downs to make others feel inferior, unworthy, or embarrassed",
+      "severity_weight": 0.8,
+      "victim_vulnerability": ["self_esteem", "social_confidence"],
+      "patterns_ko": [
+        "별거 아닌데 왜 그래",
+        "너무 예민해",
+        "오버하지 마",
+        "그게 뭐가 대수야",
+        "과민반응하지 마",
+        "그 정도로 화내?",
+        "크게 문제 아닌데",
+        "그냥 농담이었어",
+        "왜 그렇게 예민해",
+        "별일 아니야",
+        "네가 뭘 알아",
+        "제대로 해도 못 해",
+        "수준이 그거 밖에 안 돼",
+        "창피해도 하지 그래"
+      ],
+      "patterns_en": [
+        "You're overreacting",
+        "You're too sensitive",
+        "Don't make a big deal out of it",
+        "It was just a joke",
+        "You can't do anything right",
+        "You should be ashamed"
+      ]
+    },
+    {
+      "mentalmanip_code": "INT",
+      "type": "intimidation",
+      "type_ko": "협박",
+      "description_ko": "은밀한 위협을 사용하여 상대방을 방어적으로 만드는 패턴",
+      "description_en": "The manipulator places others on the defensive by using veiled threats",
+      "severity_weight": 0.95,
+      "victim_vulnerability": ["security_need", "fear_response"],
+      "patterns_ko": [
+        "후회하지 마라",
+        "좋을 대로 해",
+        "네가 알아서 해",
+        "나쁜 꿈 꾸지 마라",
+        "그럴 거면",
+        "그래서 좋을 거야",
+        "네가 손해 볼 거야",
+        "어디 한번 해봐",
+        "후회할 줄 알아야지",
+        "안 좋을 거야",
+        "그렇게 굴지 마라",
+        "나쁜 선택일 거야"
+      ],
+      "patterns_en": [
+        "You'll regret this",
+        "Don't do something you'll regret",
+        "You're making a big mistake",
+        "This won't end well for you",
+        "I wouldn't do that if I were you"
+      ]
+    },
+    {
+      "mentalmanip_code": "B_A",
+      "type": "brandishing_anger",
+      "type_ko": "화기 휘두르기",
+      "description_ko": "상대방이 제출하도록 충격을 주기 위해 화를 사용하는 패턴",
+      "description_en": "The manipulator uses anger to brandish emotional intensity to shock the victim into submission",
+      "severity_weight": 0.9,
+      "victim_vulnerability": ["conflict_avoidance", "fear_of_confrontation"],
+      "patterns_ko": [
+        "더 이상 말하지 마",
+        "그만해",
+        "닥쳐",
+        "입 다물어",
+        "말 끊지 마",
+        "말대꾸하지 마",
+        "대들지 마",
+        "말 안 통해",
+        "듣기 싫어",
+        "얘기 끝났어",
+        "화났어",
+        "소리 지르지 마",
+        "왜 그렇게 말해",
+        "네가 누구야"
+      ],
+      "patterns_en": [
+        "Shut up",
+        "Stop talking",
+        "I don't want to hear it",
+        "This conversation is over",
+        "Don't push me",
+        "You're making me angry"
+      ]
+    },
+    {
+      "mentalmanip_code": "ACC",
+      "type": "accusation",
+      "type_ko": "비난",
+      "description_ko": "피해자가 잘못되었거나 이기적이거나 배려심이 없다고 암시하는 패턴",
+      "description_en": "The manipulator suggests that the victim is at fault, selfish, uncaring, or leading an excessively easy life",
+      "severity_weight": 0.85,
+      "victim_vulnerability": ["guilt_proneness", "self_doubt"],
+      "patterns_ko": [
+        "네가 그렇게 만든 거야",
+        "네 탓이야",
+        "네가 나를 화나게 했어",
+        "너 때문이야",
+        "네가 먼저 그랬어",
+        "네가 그렇게 해서",
+        "너부터 잘해",
+        "네가 문제야",
+        "네 행동 때문이야",
+        "네가 원인이야",
+        "네가 이기적이야",
+        "너만 좋아",
+        "너 생각밖에 없어",
+        "배려심이 없어"
+      ],
+      "patterns_en": [
+        "You made me do it",
+        "It's your fault",
+        "You made me angry",
+        "This is because of you",
+        "You're so selfish",
+        "You don't care about anyone but yourself"
+      ]
+    },
+    {
+      "mentalmanip_code": "P_S",
+      "type": "persuasion_seduction",
+      "type_ko": "설득/유혹",
+      "description_ko": "매력, 정서적 호소, 논리적 추론을 사용하여 방어를 낮추게 만드는 패턴",
+      "description_en": "The manipulator employs charm, emotional appeal, or logical reasoning to make others lower their defenses",
+      "severity_weight": 0.6,
+      "victim_vulnerability": ["need_for_approval", "desire_for_harmony"],
+      "patterns_ko": [
+        "제발 부탁이야",
+        "나 좀 도와줘",
+        "우리 잘 지내자",
+        "너랑 정말 잘하고 싶어",
+        "사이좋게 지내자",
+        "이해해 줘",
+        "한번만 봐줘",
+        "나를 믿어",
+        "내가 널 사랑하잖아",
+        "우리 사이인데",
+        "특별히 해주는 거야",
+        "넌 다르잖아",
+        "넌 특별하다고"
+      ],
+      "patterns_en": [
+        "Please, I'm begging you",
+        "Help me out here",
+        "Let's get along",
+        "I really want us to work",
+        "Trust me",
+        "I love you",
+        "You're special",
+        "I'm doing this because I care"
+      ]
+    }
+  ],
+  "victim_vulnerability_dimensions": {
+    "description": "Victim vulnerability dimensions extracted from MentalManip analysis",
+    "dimensions": [
+      {
+        "name": "reality_testing",
+        "description_ko": "자신의 인식과 기억을 신뢰하는 정도",
+        "related_techniques": ["DEN", "EVA"]
+      },
+      {
+        "name": "memory_confidence",
+        "description_ko": "기억에 대한 자신감",
+        "related_techniques": ["DEN", "ACC"]
+      },
+      {
+        "name": "trust",
+        "description_ko": "타인을 신뢰하는 성향",
+        "related_techniques": ["FEI", "P_S"]
+      },
+      {
+        "name": "forgiveness_tendency",
+        "description_ko": "용서하는 성향",
+        "related_techniques": ["FEI", "RAT"]
+      },
+      {
+        "name": "empathy",
+        "description_ko": "타인의 감정을 이해하고 공감하는 능력",
+        "related_techniques": ["VIC", "SER"]
+      },
+      {
+        "name": "guilt_proneness",
+        "description_ko": "죄책감을 느끼기 쉬운 성향",
+        "related_techniques": ["VIC", "ACC"]
+      },
+      {
+        "name": "caretaking",
+        "description_ko": "타인을 돌보려는 성향",
+        "related_techniques": ["SER", "VIC"]
+      },
+      {
+        "name": "self_esteem",
+        "description_ko": "자존감 수준",
+        "related_techniques": ["S_B", "ACC"]
+      },
+      {
+        "name": "social_confidence",
+        "description_ko": "사회적 상황에서의 자신감",
+        "related_techniques": ["S_B", "INT"]
+      },
+      {
+        "name": "security_need",
+        "description_ko": "안전과 보안에 대한 욕구",
+        "related_techniques": ["INT", "SER"]
+      },
+      {
+        "name": "fear_response",
+        "description_ko": "두려움에 대한 반응성",
+        "related_techniques": ["INT", "B_A"]
+      },
+      {
+        "name": "conflict_avoidance",
+        "description_ko": "갈등 회피 성향",
+        "related_techniques": ["B_A", "EVA"]
+      },
+      {
+        "name": "fear_of_confrontation",
+        "description_ko": "대면에 대한 두려움",
+        "related_techniques": ["B_A", "INT"]
+      },
+      {
+        "name": "critical_thinking",
+        "description_ko": "비판적 사고 능력",
+        "related_techniques": ["RAT", "P_S"]
+      },
+      {
+        "name": "self_assertion",
+        "description_ko": "자기 주장 능력",
+        "related_techniques": ["RAT", "S_B"]
+      },
+      {
+        "name": "need_for_closure",
+        "description_ko": "명확한 결론에 대한 욕구",
+        "related_techniques": ["EVA", "DEN"]
+      },
+      {
+        "name": "assertiveness",
+        "description_ko": "단호성",
+        "related_techniques": ["EVA", "ACC"]
+      },
+      {
+        "name": "gratitude",
+        "description_ko": "감사하는 성향",
+        "related_techniques": ["SER", "P_S"]
+      },
+      {
+        "name": "loyalty",
+        "description_ko": "충성심/의리",
+        "related_techniques": ["SER", "VIC"]
+      },
+      {
+        "name": "obligation",
+        "description_ko": "의무감",
+        "related_techniques": ["SER", "ACC"]
+      },
+      {
+        "name": "need_for_approval",
+        "description_ko": "승인 욕구",
+        "related_techniques": ["P_S", "S_B"]
+      },
+      {
+        "name": "desire_for_harmony",
+        "description_ko": "조화에 대한 욕구",
+        "related_techniques": ["P_S", "EVA"]
+      },
+      {
+        "name": "self_doubt",
+        "description_ko": "자기 의심",
+        "related_techniques": ["ACC", "DEN"]
+      }
+    ]
+  },
+  "mapping_to_original_7": {
+    "description": "Mapping between 7 original gaslighting patterns and 11 MentalManip techniques",
+    "mappings": [
+      {
+        "original": "denial",
+        "mentalmanip": ["DEN"],
+        "coverage": "exact_match"
+      },
+      {
+        "original": "countering",
+        "mentalmanip": ["ACC", "DEN"],
+        "coverage": "partial_overlap"
+      },
+      {
+        "original": "trivializing",
+        "mentalmanip": ["S_B"],
+        "coverage": "subset"
+      },
+      {
+        "original": "diverting",
+        "mentalmanip": ["EVA"],
+        "coverage": "exact_match"
+      },
+      {
+        "original": "blocking",
+        "mentalmanip": ["INT", "B_A"],
+        "coverage": "partial_overlap"
+      },
+      {
+        "original": "blame_shifting",
+        "mentalmanip": ["ACC"],
+        "coverage": "exact_match"
+      },
+      {
+        "original": "reality_distortion",
+        "mentalmanip": ["VIC", "SER"],
+        "coverage": "partial_overlap"
+      }
+    ]
+  },
+  "new_techniques_added": {
+    "description": "New techniques from MentalManip not covered in original 7 patterns",
+    "techniques": [
+      {
+        "code": "FEI",
+        "name": "Feigning Innocence",
+        "name_ko": "무죄 강조",
+        "rationale": "Distinct from denial - pretends harm was accidental rather than denying occurrence"
+      },
+      {
+        "code": "RAT",
+        "name": "Rationalization",
+        "name_ko": "합리화",
+        "rationale": "Provides justification rather than simple denial or evasion"
+      },
+      {
+        "code": "SER",
+        "name": "Playing Servant Role",
+        "name_ko": "봉사자 연기",
+        "rationale": "Positive manipulation tactic not covered in original gaslighting framework"
+      },
+      {
+        "code": "P_S",
+        "name": "Persuasion/Seduction",
+        "name_ko": "설득/유혹",
+        "rationale": "Charm-based approach to lowering defenses - distinct from aggressive tactics"
+      }
+    ]
+  },
+  "implementation_notes": {
+    "pattern_count_expansion": {
+      "original": 7,
+      "extended": 11,
+      "increase_percentage": "57%"
+    },
+    "vulnerability_analysis_enabled": true,
+    "cross_linguistic_coverage": true,
+    "severity_weights": {
+      "range": [0.5, 0.95],
+      "highest": "intimidation (INT)",
+      "lowest": "evasion (EVA)"
+    },
+    "integration_priority": {
+      "phase_1": ["DEN", "EVA", "ACC", "S_B"],
+      "phase_2": ["VIC", "SER", "INT", "B_A"],
+      "phase_3": ["FEI", "RAT", "P_S"]
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "batch_id": "batch_1",
+  "batch_index": 1,
+  "processed_files": [
+    "ref/call/통화 녹음 김경민(리버스마운틴대표)_250520_170729.m4a",
+    "ref/call/통화 녹음 김경민(리버스마운틴대표)_250522_142641.m4a",
+    "ref/call/통화 녹음 김경민_250515_155033.m4a",
+    "ref/call/통화 녹음 신기연_250603_201127.m4a",
+    "ref/call/통화 녹음 신기연_250604_170850.m4a",
+    "ref/call/통화 녹음 신기연_250605_101141.m4a",
+    "ref/call/통화 녹음 신기연_250605_160838.m4a",
+    "ref/call/통화 녹음 신기연_250609_211005.m4a",
+    "ref/call/통화 녹음 신기연_250610_105838.m4a",
+    "ref/call/통화 녹음 신기연_250610_145719.m4a"
+  ],
+  "failed_files": [],
+  "pending_files": [],
+  "results": {
+    "batch_number": 1,
+    "total_files": 10,
+    "successful": 0,
+    "failed": 0,
+    "skipped": 10,
+    "retries": 0,
+    "duration_seconds": 0.456174,
+    "errors": []
+  },
+  "timestamp": "2026-01-16T13:48:22.670418+00:00",
+  "metadata": {}
+}

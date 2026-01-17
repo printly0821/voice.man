@@ -61,6 +61,9 @@ class WhisperXService:
         # Initialize audio converter
         self._converter = AudioConverterService()
 
+        # Track cleanup state for idempotency
+        self._cleaned_up = False
+
         logger.info(
             f"WhisperXService initialized: model={model_size}, device={device}, language={language}"
         )
@@ -135,6 +138,75 @@ class WhisperXService:
         """
         return self._pipeline.generate_speaker_stats(segments)
 
+    def cleanup(self) -> None:
+        """
+        Release all resources and clear memory.
+
+        Implements ServiceCleanupProtocol for memory management.
+        This method is idempotent and can be called multiple times safely.
+
+        Actions performed:
+        - Unloads WhisperX pipeline models
+        - Clears GPU memory cache
+        - Clears internal caches
+        """
+        if self._cleaned_up:
+            logger.debug("WhisperXService already cleaned up, skipping")
+            return
+
+        try:
+            logger.info("Starting WhisperXService cleanup...")
+
+            # Unload pipeline models
+            if hasattr(self, "_pipeline") and self._pipeline is not None:
+                self._pipeline.unload()
+                logger.debug("WhisperX pipeline unloaded")
+
+            # Clear GPU cache if available
+            try:
+                import gc
+                import torch
+
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    torch.cuda.synchronize()
+                    if hasattr(torch.cuda, "ipc_collect"):
+                        torch.cuda.ipc_collect()
+                    # Force garbage collection to free Python object memory
+                    gc.collect()
+                    logger.debug("GPU cache cleared and GC performed")
+            except ImportError:
+                pass
+            except Exception as e:
+                logger.warning(f"Failed to clear GPU cache: {e}")
+
+            # Mark as cleaned up
+            self._cleaned_up = True
+            logger.info("WhisperXService cleanup completed")
+
+        except Exception as e:
+            logger.error(f"Error during WhisperXService cleanup: {e}")
+            # Still mark as cleaned up to prevent repeated attempts
+            self._cleaned_up = True
+
+    def get_memory_usage(self) -> float:
+        """
+        Get current memory usage in MB.
+
+        Implements ServiceCleanupProtocol for memory monitoring.
+
+        Returns:
+            Memory usage in megabytes
+        """
+        try:
+            import psutil
+
+            process = psutil.Process()
+            return process.memory_info().rss / (1024 * 1024)
+        except Exception as e:
+            logger.warning(f"Failed to get memory usage: {e}")
+            return 0.0
+
     def unload(self) -> None:
         """Unload all models to free memory."""
         self._pipeline.unload()
@@ -143,7 +215,7 @@ class WhisperXService:
     def __del__(self):
         """Cleanup on destruction."""
         try:
-            self.unload()
+            self.cleanup()
         except Exception:
             pass
 

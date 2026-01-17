@@ -1,0 +1,82 @@
+# Unified BERT Configuration
+# Supports KoBERT, KLUE-BERT, and KLUE-RoBERTa models
+
+# Model selection (priority: env var > config > default)
+model:
+  # Default model type: kobert, klue_bert, klue_roberta
+  # Can be overridden by VOICE_MAN_BERT_MODEL environment variable
+  type: "kobert"  # Options: kobert, klue_bert, klue_roberta
+
+  # Model name mappings (auto-detected based on type)
+  models:
+    kobert: "skt/kobert-base-v1"
+    klue_bert: "klue/bert-base"
+    klue_roberta: "klue/roberta-base"
+
+  # Override model name (optional)
+  # name: null  # Use default for selected type
+
+  # Device selection
+  device: "auto"  # Options: auto, cuda, cpu
+
+  # Maximum sequence length
+  max_length: 128
+
+# Inference settings
+inference:
+  # Batch size for processing
+  batch_size: 8
+
+  # Confidence threshold for uncertainty flag
+  confidence_threshold: 0.7
+
+  # Timeout for inference (ms)
+  timeout_ms: 100
+
+# Performance settings
+performance:
+  # Maximum GPU memory to use (MB)
+  max_gpu_memory_mb: 4096
+
+  # Enable model caching
+  enable_cache: true
+
+  # Clear cache after N minutes of inactivity
+  cache_ttl_minutes: 30
+
+# Model variants for A/B testing
+ab_testing:
+  # Enable A/B testing mode
+  enabled: false
+
+  # Models to compare
+  models:
+    - type: "kobert"
+      weight: 0.5
+    - type: "klue_bert"
+      weight: 0.5
+
+# Benchmarking settings
+benchmarking:
+  # Number of warmup runs
+  warmup_runs: 3
+
+  # Number of benchmark runs
+  benchmark_runs: 10
+
+  # Batch sizes to test
+  batch_sizes: [1, 4, 8, 16]
+
+  # Output directory for results
+  output_dir: "ref/benchmark_results"
+
+# Logging
+logging:
+  # Log model loading
+  log_model_loading: true
+
+  # Log inference timing
+  log_inference_timing: true
+
+  # Log memory usage
+  log_memory_usage: true

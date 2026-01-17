@@ -1,0 +1,46 @@
+# KoBERT Fine-Tuning Configuration Example
+# SPEC-NLP-KOBERT-001 TAG-003: Training Configuration
+
+# Learning parameters
+learning_rate: 2.0e-5
+batch_size: 16
+num_epochs: 5
+train_val_split: 0.8
+
+# Early stopping
+early_stopping_patience: 3
+early_stopping_min_delta: 0.001
+
+# Model parameters
+max_length: 128
+num_labels: 6
+emotion_labels:
+  - happy
+  - sad
+  - angry
+  - fear
+  - disgust
+  - neutral
+
+# Optimizer and scheduler
+optimizer: adamw
+scheduler: linear
+loss_type: cross_entropy
+weight_decay: 0.01
+warmup_steps: 500
+
+# Training stability
+gradient_accumulation_steps: 1
+max_grad_norm: 1.0
+
+# Reproducibility
+seed: 42
+
+# Device and paths
+device: auto
+checkpoint_dir: models/finetuned
+
+# Logging and saving
+log_interval: 10
+eval_interval: 1
+save_best_only: true

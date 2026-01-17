@@ -1,0 +1,129 @@
+{
+  "mode": "optimized",
+  "num_files": 10,
+  "batch_size": 4,
+  "total_benchmark_time_seconds": 0.010711431503295898,
+  "metrics": {
+    "processing_time": {
+      "total_seconds": 0.0,
+      "avg_per_file_seconds": 0.0,
+      "min_per_file_seconds": Infinity,
+      "max_per_file_seconds": 0.0
+    },
+    "throughput": {
+      "files_per_minute": 0.0,
+      "total_audio_duration_seconds": 0.0,
+      "realtime_factor": 0.0
+    },
+    "accuracy": {
+      "transcription_confidence": 0.0,
+      "speaker_detection_accuracy": 0.0
+    },
+    "gpu_utilization": {
+      "utilization_percent": 0.0,
+      "memory_peak_mb": 0.0
+    },
+    "batch_efficiency": {
+      "batch_count": 0,
+      "avg_batch_size": 0.0,
+      "cache_hit_rate_percent": 0.0
+    },
+    "reliability": {
+      "success_count": 0,
+      "failure_count": 10,
+      "success_rate": 0.0
+    }
+  },
+  "files": [
+    {
+      "file_name": "통화 녹음 신동식(3D개발자)_250926_181835.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.001444101333618164,
+      "success": false,
+      "error_message": "module 'torchaudio' has no attribute 'AudioMetaData'",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신기연_250620_145742.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0009419918060302734,
+      "success": false,
+      "error_message": "module 'torchaudio' has no attribute 'AudioMetaData'",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신기연_251014_092820.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008840560913085938,
+      "success": false,
+      "error_message": "module 'torchaudio' has no attribute 'AudioMetaData'",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신동식(3D개발자)_250522_102804.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008318424224853516,
+      "success": false,
+      "error_message": "module 'torchaudio' has no attribute 'AudioMetaData'",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신기연_251029_213545.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008671283721923828,
+      "success": false,
+      "error_message": "module 'torchaudio' has no attribute 'AudioMetaData'",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신동식(3D개발자)_251210_184229.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008296966552734375,
+      "success": false,
+      "error_message": "module 'torchaudio' has no attribute 'AudioMetaData'",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신기연_250904_093101.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008232593536376953,
+      "success": false,
+      "error_message": "module 'torchaudio' has no attribute 'AudioMetaData'",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신기연_250930_121451.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008344650268554688,
+      "success": false,
+      "error_message": "module 'torchaudio' has no attribute 'AudioMetaData'",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신기연_250611_221328.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008475780487060547,
+      "success": false,
+      "error_message": "module 'torchaudio' has no attribute 'AudioMetaData'",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    },
+    {
+      "file_name": "통화 녹음 신동식(3D개발자)_250618_133149.m4a",
+      "duration_seconds": 0.0,
+      "processing_time_seconds": 0.0008649826049804688,
+      "success": false,
+      "error_message": "module 'torchaudio' has no attribute 'AudioMetaData'",
+      "transcription_segments": 0,
+      "speakers_detected": 0
+    }
+  ]
+}

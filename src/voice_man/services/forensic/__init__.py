@@ -30,6 +30,12 @@ from voice_man.services.forensic.pipeline_orchestrator import (
     BACKPRESSURE_RESUME_SIZE,
 )
 
+# SPEC-GPUOPT-001 Phase 3: GPU-Optimized Pipeline Orchestration
+from voice_man.services.forensic.gpu_pipeline_orchestrator import (
+    GPUPipelineOrchestrator,
+    CPUPipelineOrchestrator,
+)
+
 # Report generation modules
 from voice_man.reports.html_generator import ForensicHTMLGenerator
 from voice_man.reports.pdf_generator import ForensicPDFGenerator, SimplePDFGenerator
@@ -52,6 +58,9 @@ __all__ = [
     "PipelineOrchestrator",
     "MAX_QUEUE_SIZE",
     "BACKPRESSURE_RESUME_SIZE",
+    # SPEC-GPUOPT-001 Phase 3: GPU-Optimized Pipeline Orchestration
+    "GPUPipelineOrchestrator",
+    "CPUPipelineOrchestrator",
     # Report generation
     "ForensicHTMLGenerator",
     "ForensicPDFGenerator",

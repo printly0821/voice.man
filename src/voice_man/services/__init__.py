@@ -32,6 +32,17 @@ from voice_man.services_module import (
     transcribe_audio,
 )
 
+# Memory management services
+from voice_man.services.memory import (
+    MemoryManager,
+    MemoryPredictor,
+    ServiceCleanupProtocol,
+    FileMemoryStats,
+    MemoryPressureStatus,
+    PredictionResult,
+    MemoryPressureLevel,
+)
+
 __all__ = [
     "DiarizationService",
     "compute_sha256_hash",
@@ -40,4 +51,12 @@ __all__ = [
     "extract_audio_metadata",
     "detect_corrupted_file",
     "transcribe_audio",
+    # Memory management
+    "MemoryManager",
+    "MemoryPredictor",
+    "ServiceCleanupProtocol",
+    "FileMemoryStats",
+    "MemoryPressureStatus",
+    "PredictionResult",
+    "MemoryPressureLevel",
 ]

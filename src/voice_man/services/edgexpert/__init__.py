@@ -10,6 +10,16 @@ from voice_man.services.edgexpert.hardware_accelerated_codec import HardwareAcce
 from voice_man.services.edgexpert.blackwell_optimizer import BlackWellOptimizer
 from voice_man.services.edgexpert.arm_cpu_pipeline import ARMCPUPipeline
 from voice_man.services.edgexpert.thermal_manager import ThermalManager
+from voice_man.services.edgexpert.edgexpert_orchestrator import (
+    EdgeXpertOrchestrator,
+    OrchestratorConfig,
+    OperationPhase,
+    PerformanceMetrics,
+)
+from voice_man.services.edgexpert.edgexpert_whisperx_pipeline import (
+    EdgeXpertWhisperXPipeline,
+    create_edgexpert_pipeline,
+)
 
 __all__ = [
     "UnifiedMemoryManager",
@@ -18,4 +28,10 @@ __all__ = [
     "BlackWellOptimizer",
     "ARMCPUPipeline",
     "ThermalManager",
+    "EdgeXpertOrchestrator",
+    "OrchestratorConfig",
+    "OperationPhase",
+    "PerformanceMetrics",
+    "EdgeXpertWhisperXPipeline",
+    "create_edgexpert_pipeline",
 ]

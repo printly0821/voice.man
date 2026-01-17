@@ -1,0 +1,29 @@
+{
+  "batch_id": "batch_5",
+  "batch_index": 5,
+  "processed_files": [
+    "ref/call/통화 녹음 신기연_250717_191614.m4a",
+    "ref/call/통화 녹음 신기연_250719_224743.m4a",
+    "ref/call/통화 녹음 신기연_250721_092127.m4a",
+    "ref/call/통화 녹음 신기연_250723_211739.m4a",
+    "ref/call/통화 녹음 신기연_250724_195356.m4a",
+    "ref/call/통화 녹음 신기연_250725_083807.m4a",
+    "ref/call/통화 녹음 신기연_250725_103215.m4a",
+    "ref/call/통화 녹음 신기연_250725_105937.m4a",
+    "ref/call/통화 녹음 신기연_250731_093334.m4a",
+    "ref/call/통화 녹음 신기연_250731_100448.m4a"
+  ],
+  "failed_files": [],
+  "pending_files": [],
+  "results": {
+    "successful": 10,
+    "failed": 0,
+    "skipped": 0
+  },
+  "timestamp": "2026-01-16T01:13:40.071832+00:00",
+  "metadata": {
+    "duration_seconds": 849.006875,
+    "memory_peak_mb": 116791.22265625,
+    "parallel_processing": false
+  }
+}

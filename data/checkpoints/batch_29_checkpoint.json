@@ -1,0 +1,27 @@
+{
+  "batch_id": "batch_29",
+  "batch_index": 29,
+  "processed_files": [
+    "ref/call/통화 녹음 신동식(3D개발자)_250709_194744.m4a",
+    "ref/call/통화 녹음 신동식(3D개발자)_250714_142407.m4a",
+    "ref/call/통화 녹음 신동식(3D개발자)_250718_191555.m4a",
+    "ref/call/통화 녹음 신동식(3D개발자)_250826_121818.m4a",
+    "ref/call/통화 녹음 신동식(3D개발자)_250926_181835.m4a",
+    "ref/call/통화 녹음 신동식(3D개발자)_251118_170226.m4a",
+    "ref/call/통화 녹음 신동식(3D개발자)_251210_184229.m4a"
+  ],
+  "failed_files": [],
+  "pending_files": [],
+  "results": {
+    "batch_number": 29,
+    "total_files": 7,
+    "successful": 7,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "duration_seconds": 350.335488,
+    "errors": []
+  },
+  "timestamp": "2026-01-16T16:14:25.609284+00:00",
+  "metadata": {}
+}
