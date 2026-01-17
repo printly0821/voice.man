@@ -23,11 +23,17 @@ from voice_man.services.pdf_service import PDFService
 from voice_man.services.report_template_service import ReportTemplateService
 from voice_man.services.chart_service import ChartService
 
+# 포렌식 증거 API 라우터 import
+from voice_man.api.web.evidence import router as evidence_router
+
 app = FastAPI(
     title="Voice Man API",
     description="음성 녹취 증거 분석 시스템",
     version="0.1.0",
 )
+
+# 포렌식 증거 API 라우터 등록
+app.include_router(evidence_router)
 
 # Initialize services
 report_service = ReportService()
