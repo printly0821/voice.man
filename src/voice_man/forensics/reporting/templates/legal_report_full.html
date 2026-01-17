@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>포렌식 오디오 분석 보고서</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2.5cm 2cm 2cm 2cm;
+
+            @top-center {
+                content: "비밀 (CONFIDENTIAL) - 법정 제출용";
+                font-size: 9pt;
+                color: #666;
+            }
+
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 9pt;
+                color: #666;
+            }
+        }
+
+        body {
+            font-family: 'Noto Sans CJK KR', 'NanumGothic', sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .title-page {
+            text-align: center;
+            page-break-after: always;
+            padding-top: 20%;
+        }
+
+        .main-title {
+            font-size: 24pt;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .sub-title {
+            font-size: 18pt;
+            color: #555;
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 5px;
+        }
+
+        .metadata-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2em 0;
+        }
+
+        .metadata-table th {
+            text-align: left;
+            background-color: #f0f0f0;
+            padding: 8px;
+            border: 1px solid #ccc;
+            width: 30%;
+            font-weight: bold;
+        }
+
+        .metadata-table td {
+            padding: 8px;
+            border: 1px solid #ccc;
+        }
+
+        .legal-notice {
+            border: 2px solid #333;
+            padding: 1em;
+            margin: 2em 0;
+            background-color: #fff9e6;
+            page-break-inside: avoid;
+        }
+
+        .legal-notice-title {
+            font-weight: bold;
+            color: #8b0000;
+            margin-bottom: 0.5em;
+        }
+
+        .warning {
+            font-weight: bold;
+            color: #d32f2f;
+        }
+
+        .evidence-summary {
+            page-break-inside: avoid;
+        }
+
+        .hash-display {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            word-break: break-all;
+            background-color: #f5f5f5;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 1em 0;
+        }
+
+        .timestamp-info {
+            background-color: #f9f9f9;
+            padding: 10px;
+            margin: 1em 0;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .section-content {
+            margin-bottom: 30px;
+        }
+
+        .analysis-results {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .result-card {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            flex: 1;
+            min-width: 200px;
+            page-break-inside: avoid;
+        }
+
+        .result-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .result-value {
+            font-size: 1.2em;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .chain-of-custody {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2em 0;
+        }
+
+        .chain-of-custody th {
+            background-color: #f0f0f0;
+            padding: 8px;
+            border: 1px solid #ccc;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .chain-of-custody td {
+            padding: 8px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <!-- Title Page -->
+    <div class="title-page">
+        <h1 class="main-title">포렌식 오디오 분석 보고서</h1>
+        <h2 class="sub-title">Forensic Audio Analysis Report</h2>
+
+        <table class="metadata-table" style="margin-top: 3em;">
+            <tr>
+                <th>증거번호 (Evidence No.)</th>
+                <td>{{ evidence_number or "N/A" }}</td>
+            </tr>
+            <tr>
+                <th>사건번호 (Case No.)</th>
+                <td>{{ case_number or "N/A" }}</td>
+            </tr>
+            <tr>
+                <th>보고서 생성일 (Date)</th>
+                <td>{{ generation_date_korean or "N/A" }}</td>
+            </tr>
+            <tr>
+                <th>보고서 식별자 (Report ID)</th>
+                <td><code>{{ report_id or "N/A" }}</code></td>
+            </tr>
+            <tr>
+                <th>분석자 (Analyst)</th>
+                <td>{{ analyst_name or "N/A" }} {% if analyst_credential %}({{ analyst_credential }}){% endif %}</td>
+            </tr>
+            <tr>
+                <th>소속/조직 (Organization)</th>
+                <td>{{ analyst_organization or "N/A" }}</td>
+            </tr>
+        </table>
+
+        <div class="legal-notice">
+            <p class="legal-notice-title">⚠️ 법정 고지</p>
+            <p class="warning">
+                본 보고서는 대한민국 형사소송법 제313조(2)(3)에 따라<br>
+                디지털 증거의 무결성과 진정성을 입증하기 위하여 작성되었습니다.
+            </p>
+            <p>본 보고서의 무결성은 다음과 같이 검증되었습니다:</p>
+            <ul>
+                <li>SHA-256 해시: <code>{{ file_hash or "N/A" }}</code></li>
+                {% if has_digital_signature %}
+                <li>전자서명: 적용됨</li>
+                {% endif %}
+                {% if has_timestamp %}
+                <li>RFC 3161 타임스탬프: 적용됨</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="section-content">
+        <h2 class="section-title">요약 (Executive Summary)</h2>
+        <p><strong>증거개요:</strong> {{ original_filename or "N/A" }}</p>
+        <p><strong>분석 목적:</strong> 법적 증거로서 수집된 오디오 녹음의 진정성 분석 및 법정적 적용 여부 판단</p>
+        <p><strong>주요 결과:</strong></p>
+        <ul>
+            {% if analysis_results.forensic_score %}
+            <li>포렌식 점수: {{ analysis_results.forensic_score }}/100</li>
+            {% endif %}
+            {% if analysis_results.crime_detected %}
+            <li>범죄어 발견: {{ analysis_results.crime_detected }}</li>
+            {% endif %}
+            {% if analysis_results.emotional_state %}
+            <li>감정 상태: {{ analysis_results.emotional_state }}</li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <!-- Evidence Information -->
+    <div class="section-content">
+        <h2 class="section-title">증거 정보 (Evidence Information)</h2>
+        <table class="metadata-table">
+            <tr>
+                <th>파일명</th>
+                <td>{{ original_filename or "N/A" }}</td>
+            </tr>
+            <tr>
+                <th>파일 크기</th>
+                <td>{{ file_size or 0 }} bytes</td>
+            </tr>
+            <tr>
+                <th>오디오 길이</th>
+                <td>{{ audio_duration or 0 }}초</td>
+            </tr>
+            <tr>
+                <th>파일 해시 (SHA-256)</th>
+                <td><code class="hash-display">{{ file_hash or "N/A" }}</code></td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Analysis Results -->
+    <div class="section-content">
+        <h2 class="section-title">분석 결과 (Analysis Results)</h2>
+
+        <div class="analysis-results">
+            {% for result in analysis_results.scores %}
+            <div class="result-card">
+                <div class="result-title">{{ result.title or "N/A" }}</div>
+                <div class="result-value">{{ result.value or "N/A" }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Chain of Custody -->
+    <div class="section-content">
+        <h2 class="section-title">증거 관리 기록 (Chain of Custody)</h2>
+
+        {% if custody_chain %}
+        <table class="chain-of-custody">
+            <thead>
+                <tr>
+                    <th>이벤트 ID</th>
+                    <th>유형</th>
+                    <th>시각</th>
+                    <th>담당자</th>
+                    <th>해시</th>
+                    <td>전자서명</td>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in custody_chain %}
+                <tr>
+                    <td>{{ event.id or "N/A" }}</td>
+                    <td>{{ event.event_type or "N/A" }}</td>
+                    <td>{{ event.timestamp or "N/A" }}</td>
+                    <td>{{ event.custodian_name or "N/A" }}</td>
+                    <td><code class="hash-display">{{ (event.file_hash or "")[:16] }}...</code></td>
+                    <td>{% if event.digital_signature %}✅{% else %}❌{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Chain of Custody 이력이 없습니다.</p>
+        {% endif %}
+    </div>
+
+    <!-- Methodology -->
+    <div class="section-content">
+        <h2 class="section-title">분석 방법론 (Methodology)</h2>
+
+        <h3>1. 데이터 수집 및 무결성 확보</h3>
+        <p>수집된 오디오 파일에 대해 SHA-256 해시를 생성하여 무결성을 확보합니다.</p>
+
+        <h3>2. 디지털 서명 및 타임스탬프</h3>
+        <p>RSA-2048-PSS-SHA256 알고리즘을 사용하여 전자서명을 생성하고, RFC 3161 규격에 따라 타임스탬프를 발급합니다.</p>
+
+        <h3>3. 분석 기법</h3>
+        <ul>
+            <li>음성 인식 및 화자 분석</li>
+            <li>범죄어 언어/행위 패턴 분석</li>
+            <li>감정 상태 분석 (음성 톤/강조, 공격성)</li>
+            <li>통계적 신뢰도 구간 계산 (Bootstrap 95% CI)</li>
+        </ul>
+
+        <h3>4.품질 보증</h3>
+        <p>모든 분석 과정은 ISO/IEC 17025:2017 및 NIST SP 800-86 가이드라인을 따릅니다.</p>
+    </div>
+
+    <!-- Legal Compliance -->
+    <div class="section-content">
+        <h2 class="section-title">법적 준수 사항 (Legal Compliance)</h2>
+
+        <p>본 보고서는 다음 법적 표준을 준수하여 작성되었습니다:</p>
+        <ul>
+            <li>대한민국 형사소송법 제313조(2)(3) - 전자문서 증거의 증거능력</li>
+            <li>ISO/IEC 27037 - 디지털 증거 수집/보존 가이드라인</li>
+            <li>ISO/IEC 17025:2017 - 포렌식 실험실 인정 기준</li>
+            <li>NIST SP 800-86 - 디지털 포렌식 가이드</li>
+        </ul>
+
+        {% if timestamp_rfc3161 and tsa_url %}
+        <div class="timestamp-info">
+            <strong>RFC 3161 타임스탬프 정보:</strong>
+            <ul>
+                <li>Serial Number: {{ serial_number or "N/A" }}</li>
+                <li>Policy OID: {{ policy_oid or "N/A" }}</li>
+                <li>TSA URL: {{ tsa_url }}</li>
+                {% if tsa_certificate %}
+                <li>TSA Certificate: {{ tsa_certificate[:32] }}...</li>
+                {% else %}
+                <li>TSA Certificate: (없음)</li>
+                {% endif %}
+            </ul>
+        </div>
+        {% else %}
+        <p>RFC 3161 타임스탬프 정보가 없습니다.</p>
+        {% endif %}
+    </div>
+
+    <!-- Expert Qualifications -->
+    <div class="section-content">
+        <h2 class="section-title">분석자 자격 (Expert Qualifications)</h2>
+        <ul>
+            <li>성명: {{ analyst_name or "N/A" }}</li>
+            <li>자격증: {{ analyst_credential or "N/A" }}</li>
+            <li>소속: {{ analyst_organization or "N/A" }}</li>
+            {% if personnel_info and personnel_info.contact %}
+            <li>연락처: {{ personnel_info.contact or "N/A" }}</li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <!-- Footer -->
+    <div class="section-content">
+        <p class="warning">
+            본 보고서는 기밀 문서로 무단 복제, 수정, 재배포가 금지됩니다.
+            Unauthorized copying, reproduction, or distribution is prohibited.
+        </p>
+    </div>
+</body>
+</html>
