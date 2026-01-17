@@ -58,6 +58,17 @@ from voice_man.models.forensic.cross_validation import (
     CrossValidationResult,
 )
 
+from voice_man.models.forensic.evidence_models import (
+    # Chain of Custody
+    CustodyEventType,
+    CustodyLog,
+    # ISO/IEC 17025 Validation
+    MethodValidation,
+    ToolVerification,
+    # Forensic Evidence Main Model
+    ForensicEvidence,
+)
+
 __all__ = [
     # Audio Features
     "VolumeFeatures",
@@ -103,4 +114,12 @@ __all__ = [
     "TextAnalysisResult",
     "VoiceAnalysisResult",
     "CrossValidationResult",
+    # Evidence Models - Chain of Custody
+    "CustodyEventType",
+    "CustodyLog",
+    # Evidence Models - ISO/IEC 17025
+    "MethodValidation",
+    "ToolVerification",
+    # Evidence Models - Forensic Evidence
+    "ForensicEvidence",
 ]

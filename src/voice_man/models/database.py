@@ -4,16 +4,57 @@
 SQLAlchemy를 사용한 데이터베이스 모델 정의입니다.
 """
 
+import os
 from datetime import datetime
-from typing import Optional
-from sqlalchemy import String, Float, Integer, DateTime, ForeignKey, Text
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from pathlib import Path
+from typing import Optional, Generator
+
+from sqlalchemy import String, Float, Integer, DateTime, ForeignKey, Text, create_engine
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    mapped_column,
+    relationship,
+    Session,
+    sessionmaker,
+)
 
 
 class Base(DeclarativeBase):
     """SQLAlchemy Base 클래스"""
 
     pass
+
+
+# 데이터베이스 파일 경로
+DB_PATH = Path(__file__).parent.parent.parent / "voice_man.db"
+DATABASE_URL = f"sqlite:///{DB_PATH}"
+
+# 엔진 생성
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False},  # SQLite에서 필요
+    echo=False,  # 개발 시 True로 설정하여 SQL 로그 확인 가능
+)
+
+# 세션 팩토리
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db() -> Generator[Session, None, None]:
+    """
+    데이터베이스 세션 의존성 주입 함수
+
+    FastAPI Depends와 함께 사용됩니다.
+
+    Yields:
+        Session: SQLAlchemy 세션
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 class AudioFile(Base):
