@@ -40,8 +40,8 @@ class SmartDeviceSelector:
 
     # Model selection based on file size
     MODEL_MAPPING = {
-        "tiny": (0, 10),      # 0-10MB: tiny model
-        "base": (10, 50),     # 10-50MB: base model
+        "tiny": (0, 10),  # 0-10MB: tiny model
+        "base": (10, 50),  # 10-50MB: base model
         "distil-large-v3": (50, float("inf")),  # >50MB: distil-large-v3
     }
 
@@ -74,6 +74,7 @@ class SmartDeviceSelector:
         """Check if GPU is available."""
         try:
             import torch
+
             return torch.cuda.is_available()
         except ImportError:
             return False
@@ -94,7 +95,6 @@ class SmartDeviceSelector:
         try:
             import torch
 
-            allocated = torch.cuda.memory_allocated(0)
             reserved = torch.cuda.memory_reserved(0)
             total = torch.cuda.get_device_properties(0).total_memory
 
@@ -135,11 +135,14 @@ class SmartDeviceSelector:
             gpu_memory_percent = self._get_gpu_memory_percent()
 
         # Check GPU memory threshold
-        if gpu_memory_percent is not None and gpu_memory_percent > self.gpu_memory_threshold_percent:
+        if (
+            gpu_memory_percent is not None
+            and gpu_memory_percent > self.gpu_memory_threshold_percent
+        ):
             return (
                 True,
                 f"GPU memory ({gpu_memory_percent:.1f}%) exceeds threshold "
-                f"({self.gpu_memory_threshold_percent}%), using CPU"
+                f"({self.gpu_memory_threshold_percent}%), using CPU",
             )
 
         # Check file size threshold
@@ -147,10 +150,13 @@ class SmartDeviceSelector:
             return (
                 True,
                 f"File size ({file_size_mb:.1f}MB) below threshold "
-                f"({self.small_file_threshold_mb}MB), using CPU for efficiency"
+                f"({self.small_file_threshold_mb}MB), using CPU for efficiency",
             )
 
-        return False, f"Using GPU (file_size={file_size_mb:.1f}MB, gpu_memory={gpu_memory_percent:.1f}%)"
+        return (
+            False,
+            f"Using GPU (file_size={file_size_mb:.1f}MB, gpu_memory={gpu_memory_percent:.1f}%)",
+        )
 
     def get_optimal_model(self, file_size_mb: float) -> str:
         """

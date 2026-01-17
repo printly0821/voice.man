@@ -12,6 +12,9 @@ from typing import List, Callable, Optional, Awaitable, Dict
 from dataclasses import dataclass, field
 import asyncio
 
+from voice_man.services.memory.batch_optimizer import BatchSizeOptimizer
+from voice_man.services.memory.smart_device_selector import SmartDeviceSelector
+
 logger = logging.getLogger(__name__)
 
 
@@ -144,7 +147,6 @@ class BatchProcessor:
             optimal_batch = self.batch_optimizer.get_optimal_batch_size()
             logger.info(f"Dynamic batch size: {config.batch_size} -> {optimal_batch}")
             self.config.batch_size = optimal_batch
-
 
     def _check_batch_size_adjustment(self) -> int:
         """Check if batch size should be reduced based on memory pressure."""

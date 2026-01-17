@@ -530,9 +530,6 @@ class SERService:
 
                 # For emotion-dim model, logits shape is [batch, 3] for [arousal, dominance, valence]
                 if logits.dim() == 2 and logits.shape[1] >= 3:
-                    # Extract the three emotion dimensions
-                    emotion_values = logits.squeeze(0).cpu().numpy()
-
                     # Normalize to [0, 1] range using sigmoid
                     # The model outputs unnormalized logits, so we apply sigmoid
                     arousal = float(torch.sigmoid(logits[0, 0]).item())
