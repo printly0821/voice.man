@@ -76,9 +76,9 @@ class WhisperXConfig:
     """
 
     # Model settings
-    model_size: str = "large-v3"
+    model_size: str = "distil-large-v3"  # Changed from "large-v3" for memory optimization
     device: str = "cuda"
-    compute_type: str = "float16"
+    compute_type: str = "int8"  # Changed from "float16" for 2x memory savings
     language: str = "ko"
 
     # F3: Diarization model
@@ -105,7 +105,7 @@ class WhisperXConfig:
     timestamp_accuracy_ms: int = 100
 
     # N1: Model memory requirements (in GB)
-    whisper_memory_gb: float = 3.0
+    whisper_memory_gb: float = 1.5  # Reduced from 3.0 for distil-large-v3
     wav2vec_memory_gb: float = 1.2
     pyannote_memory_gb: float = 1.0
 
@@ -142,16 +142,16 @@ class WhisperXConfig:
         Create configuration from environment variables.
 
         Environment variables:
-        - WHISPERX_MODEL_SIZE: Whisper model size (default: large-v3)
+        - WHISPERX_MODEL_SIZE: Whisper model size (default: distil-large-v3)
         - WHISPERX_LANGUAGE: Language code (default: ko)
         - WHISPERX_DEVICE: Device (cuda/cpu) (default: cuda)
-        - WHISPERX_COMPUTE_TYPE: Compute type (default: float16)
+        - WHISPERX_COMPUTE_TYPE: Compute type (default: int8)
         """
         return cls(
-            model_size=os.environ.get("WHISPERX_MODEL_SIZE", "large-v3"),
+            model_size=os.environ.get("WHISPERX_MODEL_SIZE", "distil-large-v3"),
             language=os.environ.get("WHISPERX_LANGUAGE", "ko"),
             device=os.environ.get("WHISPERX_DEVICE", "cuda"),
-            compute_type=os.environ.get("WHISPERX_COMPUTE_TYPE", "float16"),
+            compute_type=os.environ.get("WHISPERX_COMPUTE_TYPE", "int8"),
         )
 
     def to_dict(self) -> Dict:
@@ -193,7 +193,11 @@ class WhisperXConfig:
             "large-v1",
             "large-v2",
             "large-v3",
-            "distil-large-v3",  # Distil-Whisper: 4-6x faster, 99% of large-v3 accuracy
+            # Distil-Whisper models for memory optimization
+            "distil-large-v3",  # 4-6x faster, 99% of large-v3 accuracy
+            "distil-medium.en",  # Medium distilled model
+            "distil-small.en",   # Small distilled model
+            "distil-tiny.en",    # Tiny distilled model (lowest memory)
         ]
         if self.model_size not in valid_models:
             raise ValueError(
@@ -203,7 +207,15 @@ class WhisperXConfig:
         if self.device not in ["cuda", "cpu", "auto"]:
             raise ValueError(f"Invalid device: {self.device}")
 
+        # Validate compute_type
+        valid_compute_types = ["float16", "float32", "int8", "int16"]
+        if self.compute_type not in valid_compute_types:
+            raise ValueError(
+                f"Invalid compute_type: {self.compute_type}. Valid options: {valid_compute_types}"
+            )
+
         if self.min_speakers < 1 or self.max_speakers > 10:
             raise ValueError("Speaker count must be between 1 and 10")
 
         return True
+

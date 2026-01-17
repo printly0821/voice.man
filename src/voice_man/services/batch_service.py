@@ -112,7 +112,12 @@ class BatchStatistics:
 
 
 class BatchProcessor:
-    """Process audio files in parallel batches with memory optimization."""
+    """Process audio files in parallel batches with memory optimization.
+
+    Memory Optimization (2026-01):
+    - Dynamic batch size based on available RAM
+    - Smart CPU fallback when GPU memory is high
+    """
 
     def __init__(self, config: BatchConfig) -> None:
         """Initialize batch processor with configuration.
@@ -124,6 +129,37 @@ class BatchProcessor:
         self.progress = BatchProgress()
         self.statistics = BatchStatistics()
 
+        # Initialize memory optimizers
+        self.batch_optimizer = BatchSizeOptimizer(
+            min_batch_size=config.min_batch_size,
+            max_batch_size=config.max_batch_size,
+        )
+        self.device_selector = SmartDeviceSelector(
+            small_file_threshold_mb=config.small_file_threshold_mb,
+            gpu_memory_threshold_percent=config.gpu_memory_threshold_percent,
+        )
+
+        # Apply dynamic batch size if enabled
+        if config.dynamic_batch_adjustment:
+            optimal_batch = self.batch_optimizer.get_optimal_batch_size()
+            logger.info(f"Dynamic batch size: {config.batch_size} -> {optimal_batch}")
+            self.config.batch_size = optimal_batch
+
+
+    def _check_batch_size_adjustment(self) -> int:
+        """Check if batch size should be reduced based on memory pressure."""
+        if not self.config.dynamic_batch_adjustment:
+            return self.config.batch_size
+
+        should_reduce, recommended = self.batch_optimizer.should_reduce_batch_size(
+            self.config.batch_size
+        )
+        if should_reduce:
+            self.config.batch_size = recommended
+            logger.warning(f"Batch size reduced to {recommended} due to memory pressure")
+
+        return self.config.batch_size
+
     def _create_batches(self, files: List[Path]) -> List[List[Path]]:
         """Split files into batches.
 
@@ -132,10 +168,16 @@ class BatchProcessor:
 
         Returns:
             List of file batches
+
+        Memory Optimization (2026-01):
+        - Uses dynamically adjusted batch size based on memory
         """
+        # Check if batch size should be adjusted
+        current_batch_size = self._check_batch_size_adjustment()
+
         batches = []
-        for i in range(0, len(files), self.config.batch_size):
-            batch = files[i : i + self.config.batch_size]
+        for i in range(0, len(files), current_batch_size):
+            batch = files[i : i + current_batch_size]
             batches.append(batch)
         return batches
 
