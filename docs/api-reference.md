@@ -398,6 +398,571 @@ Content-Disposition: attachment; filename="evidence_report_550e8400.pdf"
 
 ---
 
+## Forensic Evidence APIs
+
+### 디지털 서명 생성
+
+#### POST /api/v1/evidence/sign
+
+파일 해시에 전자서명을 생성합니다.
+
+**요청**:
+```http
+POST /api/v1/evidence/sign HTTP/1.1
+Content-Type: application/json
+
+{
+  "file_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+  "private_key_path": "/secure/keys/forensic_private_key.pem"
+}
+```
+
+**요청 파라미터**:
+| 이름 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| file_hash | string | Yes | SHA-256 파일 해시 (hex 문자열) |
+| private_key_path | string | Yes | Private Key 파일 경로 |
+
+**성공 응답** (200 OK):
+```json
+{
+  "signature": "VGhpcyBpcyBhIGJhc2U2NCBlbmNvZGVkIHNpZ25hdHVyZQ==",
+  "public_key": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+  "metadata": {
+    "algorithm": "RSA-2048-PSS-SHA256",
+    "timestamp_iso8601": "2026-01-17T10:31:45+09:00",
+    "signer": "forensic_analyzer_v1.0",
+    "file_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
+  }
+}
+```
+
+**에러 응답** (400 Bad Request):
+```json
+{
+  "status": "error",
+  "message": "유효하지 않은 파일 해시입니다"
+}
+```
+
+**코드 예시**:
+```python
+import requests
+
+url = "http://localhost:8000/api/v1/evidence/sign"
+data = {
+    "file_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+    "private_key_path": "/secure/keys/forensic_private_key.pem"
+}
+response = requests.post(url, json=data)
+print(response.json())
+```
+
+---
+
+### 디지털 서명 검증
+
+#### POST /api/v1/evidence/verify
+
+전자서명을 검증합니다.
+
+**요청**:
+```http
+POST /api/v1/evidence/verify HTTP/1.1
+Content-Type: application/json
+
+{
+  "file_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+  "signature": "VGhpcyBpcyBhIGJhc2U2NCBlbmNvZGVkIHNpZ25hdHVyZQ==",
+  "public_key": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+}
+```
+
+**요청 파라미터**:
+| 이름 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| file_hash | string | Yes | SHA-256 파일 해시 (hex 문자열) |
+| signature | string | Yes | Base64 인코딩된 서명 값 |
+| public_key | string | Yes | PEM 형식 공개키 |
+
+**성공 응답** (200 OK):
+```json
+{
+  "is_valid": true,
+  "metadata": {
+    "algorithm": "RSA-2048-PSS-SHA256",
+    "verification_timestamp": "2026-01-17T10:35:00+09:00"
+  }
+}
+```
+
+**검증 실패** (200 OK):
+```json
+{
+  "is_valid": false,
+  "reason": "서명이 파일 해시와 일치하지 않습니다"
+}
+```
+
+**코드 예시**:
+```python
+import requests
+
+url = "http://localhost:8000/api/v1/evidence/verify"
+data = {
+    "file_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+    "signature": "VGhpcyBpcyBhIGJhc2U2NCBlbmNvZGVkIHNpZ25hdHVyZQ==",
+    "public_key": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+}
+response = requests.post(url, json=data)
+print(response.json())
+```
+
+---
+
+### 타임스탬프 생성
+
+#### POST /api/v1/evidence/timestamp
+
+RFC 3161 타임스탬프 토큰을 생성합니다.
+
+**요청**:
+```http
+POST /api/v1/evidence/timestamp HTTP/1.1
+Content-Type: application/json
+
+{
+  "file_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
+}
+```
+
+**요청 파라미터**:
+| 이름 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| file_hash | string | Yes | SHA-256 파일 해시 (hex 문자열) |
+
+**성공 응답** (200 OK):
+```json
+{
+  "timestamp_token": "MIIFJDADCAQAw...",
+  "timestamp_iso8601": "2026-01-17T10:31:55+09:00",
+  "tsa_url": "https://freetsa.org/tsr",
+  "hash_algorithm": "SHA-256",
+  "file_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+  "is_rfc3161_compliant": true
+}
+```
+
+**TSA 서비스 장애 시** (200 OK):
+```json
+{
+  "timestamp_token": null,
+  "timestamp_iso8601": "2026-01-17T10:31:55+09:00",
+  "tsa_url": null,
+  "hash_algorithm": "SHA-256",
+  "file_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+  "is_rfc3161_compliant": false,
+  "warning": "TSA 서비스 장애로 로컬 타임스탬프를 사용합니다"
+}
+```
+
+**코드 예시**:
+```python
+import requests
+
+url = "http://localhost:8000/api/v1/evidence/timestamp"
+data = {
+    "file_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
+}
+response = requests.post(url, json=data)
+print(response.json())
+```
+
+---
+
+### 감사 로그 조회
+
+#### GET /api/v1/evidence/audit-log
+
+증거 접근 이력을 조회합니다.
+
+**요청**:
+```http
+GET /api/v1/evidence/audit-log?asset_uuid=550e8400-e29b-41d4-a716-446655440000&user_id=forensic_analyst_01 HTTP/1.1
+```
+
+**쿼리 파라미터**:
+| 이름 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| asset_uuid | UUID | No | 특정 자산의 로그만 조회 |
+| user_id | string | No | 특정 사용자의 로그만 조회 |
+| event_type | string | No | 특정 이벤트 유형 (upload, access, analysis, report) |
+| start_time | datetime | No | 시작 시간 (ISO 8601) |
+| end_time | datetime | No | 종료 시간 (ISO 8601) |
+| limit | integer | No | 최대 결과 수 (기본값: 100) |
+
+**성공 응답** (200 OK):
+```json
+{
+  "total_entries": 47,
+  "entries": [
+    {
+      "entry_id": 1,
+      "timestamp_iso8601": "2026-01-17T10:32:05+09:00",
+      "event_type": "upload",
+      "asset_uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "user_id": "forensic_analyst_01",
+      "action": "File uploaded and hash generated",
+      "metadata": {
+        "filename": "recording.mp3",
+        "file_size": 1048576,
+        "sha256_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
+      }
+    },
+    {
+      "entry_id": 2,
+      "timestamp_iso8601": "2026-01-17T14:15:00+09:00",
+      "event_type": "analysis",
+      "asset_uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "user_id": "forensic_analyst_01",
+      "action": "Forensic analysis started",
+      "metadata": {
+        "analysis_type": "comprehensive_forensic",
+        "workstation_id": "FORENSIC-WS-01"
+      }
+    }
+  ]
+}
+```
+
+**코드 예시**:
+```python
+import requests
+
+url = "http://localhost:8000/api/v1/evidence/audit-log"
+params = {
+    "asset_uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "event_type": "analysis",
+    "limit": 50
+}
+response = requests.get(url, params=params)
+print(response.json())
+```
+
+---
+
+### 감사 로그 무결성 검증
+
+#### POST /api/v1/evidence/audit-log/verify
+
+감사 로그의 해시 체인 무결성을 검증합니다.
+
+**요청**:
+```http
+POST /api/v1/evidence/audit-log/verify HTTP/1.1
+Content-Type: application/json
+
+{
+  "log_file_path": "/var/log/forensic/audit.jsonl"
+}
+```
+
+**요청 파라미터**:
+| 이름 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| log_file_path | string | No | 감사 로그 파일 경로 (기본값: 시스템 기본 경로) |
+
+**성공 응답** (200 OK):
+```json
+{
+  "is_valid": true,
+  "total_entries": 47,
+  "verified_entries": 47,
+  "invalid_entries": [],
+  "hash_chain_valid": true,
+  "verification_timestamp": "2026-01-18T09:00:00+09:00"
+}
+```
+
+**변조 탐지** (200 OK):
+```json
+{
+  "is_valid": false,
+  "total_entries": 47,
+  "verified_entries": 35,
+  "invalid_entries": [36, 37, 38],
+  "hash_chain_valid": false,
+  "error_details": "Entry 36: Hash mismatch detected",
+  "verification_timestamp": "2026-01-18T09:00:00+09:00"
+}
+```
+
+**코드 예시**:
+```python
+import requests
+
+url = "http://localhost:8000/api/v1/evidence/audit-log/verify"
+data = {
+    "log_file_path": "/var/log/forensic/audit.jsonl"
+}
+response = requests.post(url, json=data)
+result = response.json()
+
+if result["is_valid"]:
+    print("✓ 감사 로그 무결성 검증 통과")
+else:
+    print(f"✗ 감사 로그 변조 탐지: {result['invalid_entries']}")
+```
+
+---
+
+### Bootstrap 신뢰구간 계산
+
+#### POST /api/v1/validation/bootstrap-ci
+
+Bootstrap resampling을 사용하여 95% 신뢰구간을 계산합니다.
+
+**요청**:
+```http
+POST /api/v1/validation/bootstrap-ci HTTP/1.1
+Content-Type: application/json
+
+{
+  "data": [0.85, 0.72, 0.68, 0.90, 0.75, 0.82, 0.78, 0.88],
+  "n_bootstrap": 10000,
+  "confidence_level": 0.95,
+  "method": "percentile",
+  "random_seed": 42
+}
+```
+
+**요청 파라미터**:
+| 이름 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| data | array[float] | Yes | 분석 데이터 배열 |
+| n_bootstrap | integer | No | Bootstrap 반복 횟수 (기본값: 10000) |
+| confidence_level | float | No | 신뢰 수준 (기본값: 0.95) |
+| method | string | No | 방법론: percentile 또는 bca (기본값: percentile) |
+| random_seed | integer | No | 재현성을 위한 Random seed |
+
+**성공 응답** (200 OK):
+```json
+{
+  "mean": 0.7975,
+  "median": 0.8,
+  "lower_bound": 0.7125,
+  "upper_bound": 0.8825,
+  "confidence_level": 0.95,
+  "method": "percentile",
+  "n_bootstrap": 10000,
+  "random_seed": 42
+}
+```
+
+**코드 예시**:
+```python
+import requests
+
+url = "http://localhost:8000/api/v1/validation/bootstrap-ci"
+data = {
+    "data": [0.85, 0.72, 0.68, 0.90, 0.75, 0.82, 0.78, 0.88],
+    "n_bootstrap": 10000,
+    "confidence_level": 0.95,
+    "method": "bca",
+    "random_seed": 42
+}
+response = requests.post(url, json=data)
+result = response.json()
+
+print(f"평균: {result['mean']:.4f}")
+print(f"95% 신뢰구간: [{result['lower_bound']:.4f}, {result['upper_bound']:.4f}]")
+```
+
+---
+
+### 성능 메트릭 계산
+
+#### POST /api/v1/validation/performance-metrics
+
+범죄 패턴 탐지 모듈의 성능 메트릭을 계산합니다.
+
+**요청**:
+```http
+POST /api/v1/validation/performance-metrics HTTP/1.1
+Content-Type: application/json
+
+{
+  "y_true": [1, 0, 1, 1, 0, 1, 0, 0, 1, 1],
+  "y_pred": [1, 0, 1, 0, 0, 1, 1, 0, 1, 1],
+  "labels": ["gaslighting", "threat", "coercion"]
+}
+```
+
+**요청 파라미터**:
+| 이름 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| y_true | array[int] | Yes | Ground Truth 레이블 (0 또는 1) |
+| y_pred | array[int] | Yes | 예측 레이블 (0 또는 1) |
+| labels | array[string] | No | 클래스 레이블 이름 |
+
+**성공 응답** (200 OK):
+```json
+{
+  "precision": 0.8571,
+  "recall": 0.8571,
+  "f1_score": 0.8571,
+  "accuracy": 0.8,
+  "confusion_matrix": [
+    [3, 1],
+    [1, 5]
+  ],
+  "true_positives": 5,
+  "true_negatives": 3,
+  "false_positives": 1,
+  "false_negatives": 1,
+  "classification_report": {
+    "0": {
+      "precision": 0.75,
+      "recall": 0.75,
+      "f1_score": 0.75,
+      "support": 4
+    },
+    "1": {
+      "precision": 0.8333,
+      "recall": 0.8333,
+      "f1_score": 0.8333,
+      "support": 6
+    }
+  }
+}
+```
+
+**코드 예시**:
+```python
+import requests
+
+url = "http://localhost:8000/api/v1/validation/performance-metrics"
+data = {
+    "y_true": [1, 0, 1, 1, 0, 1, 0, 0, 1, 1],
+    "y_pred": [1, 0, 1, 0, 0, 1, 1, 0, 1, 1],
+    "labels": ["gaslighting", "threat", "coercion"]
+}
+response = requests.post(url, json=data)
+result = response.json()
+
+print(f"Precision: {result['precision']:.4f}")
+print(f"Recall: {result['recall']:.4f}")
+print(f"F1 Score: {result['f1_score']:.4f}")
+print(f"Accuracy: {result['accuracy']:.4f}")
+```
+
+---
+
+### Chain of Custody 검증
+
+#### POST /api/v1/evidence/chain-of-custody/verify
+
+전체 Chain of Custody를 검증합니다.
+
+**요청**:
+```http
+POST /api/v1/evidence/chain-of-custody/verify HTTP/1.1
+Content-Type: application/json
+
+{
+  "asset_uuid": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**요청 파라미터**:
+| 이름 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| asset_uuid | UUID | Yes | 검증할 자산의 UUID |
+
+**성공 응답** (200 OK):
+```json
+{
+  "asset_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "all_passed": true,
+  "checks": {
+    "file_hash_integrity": {
+      "passed": true,
+      "initial_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+      "current_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
+    },
+    "digital_signature": {
+      "passed": true,
+      "signature_valid": true,
+      "algorithm": "RSA-2048-PSS-SHA256"
+    },
+    "timestamp": {
+      "passed": true,
+      "is_rfc3161_compliant": true,
+      "timestamp": "2026-01-17T10:31:55+09:00"
+    },
+    "audit_log": {
+      "passed": true,
+      "total_entries": 47,
+      "hash_chain_valid": true
+    }
+  },
+  "verification_timestamp": "2026-01-18T09:00:00+09:00"
+}
+```
+
+**검증 실패** (200 OK):
+```json
+{
+  "asset_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "all_passed": false,
+  "checks": {
+    "file_hash_integrity": {
+      "passed": false,
+      "initial_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+      "current_hash": "different_hash_value",
+      "error": "File hash mismatch - potential tampering detected"
+    },
+    "digital_signature": {
+      "passed": true,
+      "signature_valid": true
+    },
+    "timestamp": {
+      "passed": true,
+      "is_rfc3161_compliant": true
+    },
+    "audit_log": {
+      "passed": true,
+      "total_entries": 47,
+      "hash_chain_valid": true
+    }
+  },
+  "failed_checks": ["file_hash_integrity"],
+  "verification_timestamp": "2026-01-18T09:00:00+09:00"
+}
+```
+
+**코드 예시**:
+```python
+import requests
+
+url = "http://localhost:8000/api/v1/evidence/chain-of-custody/verify"
+data = {
+    "asset_uuid": "550e8400-e29b-41d4-a716-446655440000"
+}
+response = requests.post(url, json=data)
+result = response.json()
+
+if result["all_passed"]:
+    print("✓ 모든 Chain of Custody 검증 통과 - 법정 제출 가능")
+else:
+    print(f"✗ 검증 실패: {result['failed_checks']}")
+    for check_name, check_result in result["checks"].items():
+        if not check_result["passed"]:
+            print(f"  - {check_name}: {check_result.get('error', 'Failed')}")
+```
+
+---
+
 ## HTTP 상태 코드
 
 | 코드 | 설명 |

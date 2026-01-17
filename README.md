@@ -1368,6 +1368,264 @@ print(f"위험 등급: {forensic_score.risk_level}")
 print(f"증거 생성: {forensic_score.evidence_summary}")
 ```
 
+## 포렌식 증거자료 방법론 (SPEC-FORENSIC-EVIDENCE-001)
+
+### 개요
+
+voice.man은 법정 증거로 사용 가능한 포렌식 오디오 분석 시스템입니다. 한국 형사소송법 및 국제 표준을 준수하여 증거의 무결성과 진정성을 보장합니다.
+
+### 법적 준수 표준
+
+- **한국 형사소송법 Article 313(2)(3)**: 디지털 증거의 무결성 및 진정성 입증
+- **ISO/IEC 27037**: 디지털 증거 수집, 보존, 이동 가이드라인
+- **ISO/IEC 17025**: 포렌식 실험실 인정 기준
+- **NIST SP 800-86**: 디지털 포렌식 통합 가이드
+
+### Chain of Custody (증거 보관 연속성)
+
+#### 전자서명 (Digital Signature)
+
+모든 증거 파일은 RSA 2048-bit 전자서명으로 보호됩니다.
+
+**구현 모듈**: `src/voice_man/forensics/evidence/digital_signature.py`
+
+**기능**:
+- RSA 2048-bit 키 쌍 생성
+- SHA-256 파일 해시에 전자서명 생성
+- Public Key로 서명 검증
+- 서명 메타데이터 (알고리즘, 타임스탬프, 서명자 정보)
+
+**사용 예시**:
+```python
+from voice_man.forensics.evidence.digital_signature import DigitalSignatureService
+
+# 서명 서비스 초기화
+signature_service = DigitalSignatureService()
+
+# 키 쌍 생성
+private_key, public_key = signature_service.generate_key_pair()
+
+# 파일 해시에 서명 생성
+file_hash = "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
+signature, public_key, metadata = signature_service.sign_hash(
+    file_hash=file_hash,
+    private_key_path="/secure/keys/forensic_private_key.pem"
+)
+
+# 서명 검증
+is_valid = signature_service.verify_signature(
+    file_hash=file_hash,
+    signature=signature,
+    public_key=public_key
+)
+print(f"서명 검증: {'✓ 통과' if is_valid else '✗ 실패'}")
+```
+
+#### RFC 3161 타임스탬프
+
+RFC 3161 준수 타임스탬프 서비스를 통해 증거 수집 시점을 법적으로 증명합니다.
+
+**구현 모듈**: `src/voice_man/forensics/evidence/timestamp_service.py`
+
+**기능**:
+- RFC 3161 타임스탬프 토큰 생성
+- TSA (Time Stamping Authority) 연동
+- 로컬 타임스탬프 폴백
+- 타임스탬프 검증
+
+**사용 예시**:
+```python
+from voice_man.forensics.evidence.timestamp_service import TimestampService
+
+# 타임스탬프 서비스 초기화
+timestamp_service = TimestampService(tsa_url="https://freetsa.org/tsr")
+
+# 타임스탬프 토큰 생성
+file_hash = "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
+timestamp_token = timestamp_service.generate_timestamp(file_hash)
+
+print(f"타임스탬프: {timestamp_token['timestamp_iso8601']}")
+print(f"RFC 3161 준수: {timestamp_token['is_rfc3161_compliant']}")
+```
+
+#### 불변 감사 로그 (Immutable Audit Log)
+
+모든 증거 접근 및 처리 이벤트를 변조 불가능한 append-only 로그에 기록합니다.
+
+**구현 모듈**: `src/voice_man/forensics/evidence/audit_logger.py`
+
+**기능**:
+- Append-only 로그 아키텍처
+- 해시 체인 무결성 검증
+- 변조 탐지
+- 이벤트 유형: upload, access, analysis, report, verification
+
+**사용 예시**:
+```python
+from voice_man.forensics.evidence.audit_logger import ImmutableAuditLogger
+
+# 감사 로거 초기화
+audit_logger = ImmutableAuditLogger(log_file_path="/var/log/forensic/audit.jsonl")
+
+# 이벤트 기록
+audit_logger.log_event(
+    event_type="upload",
+    asset_uuid="550e8400-e29b-41d4-a716-446655440000",
+    user_id="forensic_analyst_01",
+    action="File uploaded and hash generated",
+    metadata={
+        "filename": "recording.mp3",
+        "file_size": 1048576,
+        "sha256_hash": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
+    }
+)
+
+# 해시 체인 무결성 검증
+is_valid, invalid_entries = audit_logger.verify_chain()
+if is_valid:
+    print("✓ 감사 로그 무결성 검증 통과")
+else:
+    print(f"✗ 감사 로그 변조 탐지! 변조된 엔트리: {invalid_entries}")
+```
+
+### 학술 검증
+
+#### Bootstrap 95% 신뢰구간
+
+포렌식 스코어의 통계적 유의성을 평가하기 위해 Bootstrap resampling 기법을 사용합니다.
+
+**구현 모듈**: `src/voice_man/forensics/validation/bootstrap.py`
+
+**기능**:
+- Percentile Bootstrap 방법
+- BCa (Bias-Corrected and Accelerated) 방법
+- 95% 신뢰구간 계산
+- 재현 가능성 보장 (random_seed)
+
+**사용 예시**:
+```python
+from voice_man.forensics.validation.bootstrap import BootstrapConfidenceInterval
+import numpy as np
+
+# Bootstrap CI 계산기 초기화
+bootstrap = BootstrapConfidenceInterval(
+    n_iterations=10000,
+    confidence_level=0.95,
+    random_seed=42  # 재현성 보장
+)
+
+# 포렌식 스코어 데이터
+scores = np.array([0.85, 0.72, 0.68, 0.90, 0.75, 0.82, 0.78, 0.88])
+
+# 95% 신뢰구간 계산
+lower_bound, upper_bound = bootstrap.calculate_ci(scores, method="bca")
+
+print(f"평균 점수: {scores.mean():.4f}")
+print(f"95% 신뢰구간: [{lower_bound:.4f}, {upper_bound:.4f}]")
+```
+
+#### 성능 메트릭 (Precision, Recall, F1)
+
+범죄 패턴 탐지 모듈의 정확도를 평가하기 위해 표준 분류 성능 지표를 사용합니다.
+
+**구현 모듈**: `src/voice_man/forensics/validation/performance_metrics.py`
+
+**기능**:
+- Precision (정밀도): 예측된 양성 중 실제 양성의 비율
+- Recall (재현율): 실제 양성 중 정확히 예측된 비율
+- F1 Score: Precision과 Recall의 조화 평균
+- Confusion Matrix: 혼동 행렬
+
+**사용 예시**:
+```python
+from voice_man.forensics.validation.performance_metrics import PerformanceMetrics
+import numpy as np
+
+# 성능 메트릭 계산기 초기화
+metrics = PerformanceMetrics()
+
+# Ground Truth와 예측 레이블
+y_true = np.array([1, 0, 1, 1, 0, 1, 0, 0, 1, 1])
+y_pred = np.array([1, 0, 1, 0, 0, 1, 1, 0, 1, 1])
+
+# 성능 메트릭 계산
+precision, recall, f1 = metrics.calculate_metrics(y_true, y_pred)
+
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
+print(f"F1 Score: {f1:.4f}")
+
+# Confusion Matrix
+confusion_matrix = metrics.get_confusion_matrix(y_true, y_pred)
+print(f"Confusion Matrix:\n{confusion_matrix}")
+```
+
+### 법정 제출 가이드
+
+#### 증거 수집 체크리스트
+
+**분석 전 준비사항**:
+- [x] 증거 파일 원본 확보 및 봉인
+- [x] SHA-256 해시 생성 및 기록
+- [x] 전자서명 적용
+- [x] RFC 3161 타임스탬프 발급
+- [x] 감사 로그 초기화
+
+**분석 중 필수사항**:
+- [x] 원본 파일 변경 금지 (사본으로 작업)
+- [x] 모든 접근 이벤트 감사 로그 기록
+- [x] 분석 파라미터 문서화
+- [x] 중간 결과 타임스탬프
+
+**분석 후 검증사항**:
+- [x] 해시 체인 무결성 검증
+- [x] 전자서명 검증
+- [x] 타임스탬프 검증
+- [x] 재현성 테스트 통과
+
+#### 법정 제출용 보고서 생성
+
+```python
+from voice_man.reports.html_generator import ForensicHTMLGenerator
+
+# HTML 보고서 생성기 초기화
+generator = ForensicHTMLGenerator()
+
+# 법정 제출용 보고서 생성
+html_report = generator.generate_from_json(
+    json_path="forensic_analysis.json",
+    output_path="evidence_report.html"
+)
+
+# PDF 변환 (Playwright)
+from voice_man.reports.pdf_generator import PDFGenerator
+
+pdf_generator = PDFGenerator()
+pdf_report = pdf_generator.html_to_pdf(
+    html_path="evidence_report.html",
+    output_path="evidence_report.pdf"
+)
+
+print(f"✓ 법정 제출용 보고서 생성 완료: {pdf_report}")
+```
+
+### 관련 문서
+
+- [포렌식 오디오 분석 증거자료 방법론](docs/FORENSIC_EVIDENCE_METHODOLOGY.md)
+- [Chain of Custody 운영 가이드](docs/CHAIN_OF_CUSTODY_GUIDE.md)
+- [법적 준수 체크리스트](docs/LEGAL_COMPLIANCE_CHECKLIST.md)
+- [API 레퍼런스 - Forensic Evidence APIs](docs/api-reference.md#forensic-evidence-apis)
+
+### 구현 현황
+
+- **전자서명**: 100% 테스트 커버리지
+- **RFC 3161 타임스탬프**: 93% 테스트 커버리지
+- **불변 감사 로그**: 88% 테스트 커버리지
+- **Bootstrap 신뢰구간**: 96% 테스트 커버리지
+- **성능 메트릭**: 65% 테스트 커버리지
+
+---
+
 ## 라이선스
 
 MIT License
